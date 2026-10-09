@@ -4,11 +4,19 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
 
-    // Only these Google accounts may launch a class. Replace the placeholders with real addresses.
+    // A browser becomes a teacher by writing teachers/{uid} with the shared passcode,
+    // which must equal config/main.pass (a document nobody can read, only the rules).
     function isTeacher() {
-      return signedIn()
-        && request.auth.token.email_verified == true
-        && request.auth.token.email in ['TEACHER_EMAIL_1', 'TEACHER_EMAIL_2'];
+      return signedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+
+    match /config/{any} { allow read, write: if false; }
+
+    match /teachers/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['pass'])
+        && request.resource.data.pass == get(/databases/$(database)/documents/config/main).data.pass;
     }
 
     function classDoc(code) {

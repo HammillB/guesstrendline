@@ -2,7 +2,7 @@
 // Loaded as an ES module by index.html. If it fails to load, the game falls back to practice mode.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {
-  getAuth, onAuthStateChanged, signInAnonymously, signInWithPopup, GoogleAuthProvider
+  getAuth, onAuthStateChanged, signInAnonymously
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import {
   initializeFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs,
@@ -40,16 +40,27 @@ const api = {
     return { uid: u.uid };
   },
 
-  async signInTeacher() {
-    const cur = await ready();
-    if (cur && !cur.isAnonymous) return { uid: cur.uid, email: cur.email };
-    const res = await signInWithPopup(auth, new GoogleAuthProvider());
-    return { uid: res.user.uid, email: res.user.email };
+  // Teachers unlock with a shared passcode. The passcode is checked by the security rules,
+  // which compare it to a document students cannot read (config/main).
+  async signInTeacher(pass) {
+    let u = await ready();
+    if (!u) u = (await signInAnonymously(auth)).user;
+    try {
+      await setDoc(doc(db, 'teachers', u.uid), { pass });
+    } catch (e) {
+      if (e && e.code === 'permission-denied') { const err = new Error('bad passcode'); err.teacherPass = true; throw err; }
+      throw e;
+    }
+    return { uid: u.uid };
   },
 
   async currentTeacher() {
     const u = await ready();
-    return u && !u.isAnonymous ? { uid: u.uid, email: u.email } : null;
+    if (!u) return null;
+    try {
+      const s = await getDoc(doc(db, 'teachers', u.uid));
+      return s.exists() ? { uid: u.uid } : null;
+    } catch (e) { return null; }
   },
 
   async createClass(code, data) {
