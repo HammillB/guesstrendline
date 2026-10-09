@@ -50,7 +50,8 @@
   .wrap { max-width: 1040px; margin-inline: auto; display: grid; gap: 28px; }
 
   .top { display: flex; flex-wrap: wrap; gap: 20px 32px; align-items: flex-end; justify-content: space-between; }
-  .top > div { min-width: 0; flex: 1 1 320px; }
+  .top > div:first-child { min-width: 0; flex: 1 1 320px; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
   h1 {
     font: 400 clamp(1.3rem, 5.6vw, 2.3rem)/1.35 var(--display);
     color: var(--yellow);
@@ -131,15 +132,17 @@
     box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 5px 0 0 #7a5d00;
   }
   button:active { transform: translateY(4px); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 1px 0 0 #7a5d00; }
-  #next { background: var(--cyan); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 5px 0 0 #006b7a; }
-  #next:active { box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 1px 0 0 #006b7a; }
+  #next, .alt { background: var(--cyan); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 5px 0 0 #006b7a; }
+  #next:active, .alt:active { box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 1px 0 0 #006b7a; }
+  .small { padding: 11px 14px; font-size: 0.62rem; background: var(--screen); color: var(--muted); border: 3px solid var(--edge); box-shadow: none; }
+  .small:active { box-shadow: none; }
   button:disabled { opacity: 0.55; cursor: default; }
   button:disabled:active { transform: none; }
   button:focus-visible, select:focus-visible { outline: 3px dashed var(--ink); outline-offset: 4px; }
   .resid-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 1.3rem; color: var(--muted); }
   select { font: 1.3rem var(--body); padding: 4px 8px; border: 3px solid var(--edge); border-radius: 0; background: var(--screen); color: var(--ink); }
 
-  .readout h2 { font: 400 0.85rem/1.4 var(--display); color: var(--cyan); text-transform: uppercase; margin: 0 0 16px; }
+  .readout h2, .classview h2 { font: 400 0.85rem/1.4 var(--display); color: var(--cyan); text-transform: uppercase; margin: 0 0 16px; }
   .hint { margin: 0 0 18px; color: var(--muted); font-size: 1.35rem; }
   .eq { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; margin-bottom: 16px; }
   .eq .sw { width: 14px; height: 14px; grid-row: 1 / span 2; }
@@ -161,26 +164,67 @@
   .bars-labels { display: flex; gap: 6px; font-size: 1rem; color: var(--muted); margin-bottom: 16px; }
   .bars-labels span { flex: 1 1 0; min-width: 0; text-align: center; }
 
+  /* Title screen */
+  .start { max-width: 600px; margin-inline: auto; display: grid; gap: 28px; text-align: center; }
+  .start h1 { font-size: clamp(1.6rem, 6.8vw, 3rem); }
+  .tagline { margin: 0; font-size: 1.7rem; color: var(--muted); }
+  .hero { max-width: 360px; width: 100%; margin: 3px auto; }
+  .hero svg { display: block; width: 100%; height: auto; }
+  .hero .you-line, .hero .best-line { stroke-width: 3; }
+  .prompt { margin: 0; font: 400 0.7rem/1.4 var(--display); color: var(--yellow); text-transform: uppercase; animation: blink 1.1s steps(2) infinite; }
+  .menu { display: grid; gap: 22px; padding-bottom: 6px; }
+  .menu-btn { display: block; width: 100%; text-align: left; padding: 22px; font-size: 0.95rem; line-height: 1.3; }
+  .menu-btn small { display: block; margin-top: 10px; font: 1.35rem/1.15 var(--body); text-transform: none; }
+  .menu-btn .go { display: inline-block; width: 0; height: 0; margin-right: 14px; border-left: 10px solid currentColor; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+  .menu-btn:hover .go, .menu-btn:focus-visible .go { animation: blink 0.8s steps(2) infinite; }
+  .classview { max-width: 600px; margin: 4px auto; }
+  .classview .hint { margin-bottom: 22px; }
+
   @media (prefers-reduced-motion: reduce) {
     .best-line.draw { animation: none; stroke-dasharray: none; }
-    .record { animation: none; }
+    .record, .prompt, .menu-btn .go { animation: none !important; }
   }
 </style>
 
 </head>
 <body>
-<main class="wrap">
+<main>
+<section class="start" id="startView">
+  <div>
+    <h1>Fit the Line</h1>
+    <p class="tagline">Drag the line. Beat the best fit.</p>
+  </div>
+  <div class="screen hero">
+    <svg id="heroPlot" viewBox="0 0 320 160" role="img" aria-label="Example scatter plot with a cyan guess line and the pink best-fit line"></svg>
+  </div>
+  <p class="prompt">Select mode</p>
+  <div class="menu" id="menu">
+    <button class="menu-btn" id="playSolo" type="button"><span class="go"></span>Play solo<small>One player, 10 rounds. Beat your hi-score.</small></button>
+    <button class="menu-btn alt" id="playClass" type="button"><span class="go"></span>Class game<small>Teacher launches a class. Students join with a code.</small></button>
+  </div>
+</section>
+
+<section class="classview board" id="classView" hidden aria-labelledby="classTitle">
+  <h2 id="classTitle">Class game</h2>
+  <p class="hint">Class mode is still being built. Soon you will launch a class here, put a code on the board, and students will join from their own devices with just a name.</p>
+  <button class="small" id="classBack" type="button">Back</button>
+</section>
+
+<div class="wrap" id="gameView" hidden>
   <header class="top">
     <div>
       <h1>Fit the Line</h1>
       <p class="lede">Drag the two handles so the line runs through the middle of the dots. Press Check Line to see the true least-squares line and how close you got.</p>
     </div>
-    <fieldset class="seg" id="levels">
-      <legend>Difficulty</legend>
-      <label><input type="radio" name="level" id="lv-easy" value="easy" checked><span>Easy</span></label>
-      <label><input type="radio" name="level" id="lv-medium" value="medium"><span>Medium</span></label>
-      <label><input type="radio" name="level" id="lv-hard" value="hard"><span>Hard</span></label>
-    </fieldset>
+    <div class="ctl">
+      <fieldset class="seg" id="levels">
+        <legend>Difficulty</legend>
+        <label><input type="radio" name="level" id="lv-easy" value="easy" checked><span>Easy</span></label>
+        <label><input type="radio" name="level" id="lv-medium" value="medium"><span>Medium</span></label>
+        <label><input type="radio" name="level" id="lv-hard" value="hard"><span>Hard</span></label>
+      </fieldset>
+      <button class="small" id="toMenu" type="button">Menu</button>
+    </div>
   </header>
 
   <div class="layout">
@@ -213,6 +257,7 @@
 
     <section class="readout" id="readout" aria-live="polite"></section>
   </div>
+</div>
 </main>
 
 <script>
@@ -596,7 +641,51 @@
     if (e.target && e.target.name === 'level') { level = e.target.value; startGame(); }
   });
 
-  startGame();
+  /* ---------- title screen ---------- */
+  var VIEWS = { start: 'startView', cls: 'classView', game: 'gameView' };
+  function showView(name, focusId) {
+    for (var k in VIEWS) document.getElementById(VIEWS[k]).hidden = (k !== name);
+    window.scrollTo(0, 0);
+    if (name === 'start') drawHero();
+    var f = focusId && document.getElementById(focusId);
+    if (f) f.focus({ preventScroll: true });
+  }
+
+  /* Small demo plot on the title screen: a fresh cloud each visit, the best-fit line, and a slightly-off guess. */
+  function drawHero() {
+    var s = document.getElementById('heroPlot'), i;
+    s.textContent = '';
+    var hp = makeData('medium'), hb = fit(hp), mx = 0, my = 0;
+    for (i = 0; i < hp.length; i++) { mx += hp[i].x; my += hp[i].y; }
+    mx /= hp.length; my /= hp.length;
+    var gm = hb.m > 0 ? hb.m - 0.3 : hb.m + 0.3, gb = my - gm * mx;
+    function hx(x) { return 10 + x * 30; }
+    function hy(y) { return 150 - y * 14; }
+    var c = el('clipPath', { id: 'heroclip' }, el('defs', {}, s));
+    el('rect', { x: 10, y: 10, width: 300, height: 140 }, c);
+    el('rect', { x: 0, y: 0, width: 320, height: 160, 'class': 'plotbg' }, s);
+    var g = el('g', { 'clip-path': 'url(#heroclip)' }, s);
+    for (i = 0; i < hp.length; i++) el('rect', { x: hx(hp[i].x) - 3, y: hy(hp[i].y) - 3, width: 6, height: 6, 'class': 'dot' }, g);
+    el('line', { x1: hx(0), y1: hy(gb), x2: hx(10), y2: hy(10 * gm + gb), 'class': 'you-line' }, g);
+    el('line', { x1: hx(0), y1: hy(hb.b), x2: hx(10), y2: hy(10 * hb.m + hb.b), 'class': 'best-line' }, g);
+    el('rect', { x: 10, y: 10, width: 300, height: 140, 'class': 'frame' }, s);
+  }
+
+  document.getElementById('playSolo').addEventListener('click', function () { showView('game'); startGame(); });
+  document.getElementById('playClass').addEventListener('click', function () { showView('cls', 'classBack'); });
+  document.getElementById('classBack').addEventListener('click', function () { showView('start', 'playClass'); });
+  document.getElementById('toMenu').addEventListener('click', function () { showView('start', 'playSolo'); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    if (document.getElementById('startView').hidden) return;
+    var btns = Array.prototype.slice.call(document.querySelectorAll('#menu button'));
+    var i = btns.indexOf(document.activeElement);
+    var n = i < 0 ? 0 : (i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length;
+    btns[n].focus();
+    e.preventDefault();
+  });
+
+  showView('start');
 })();
 </script>
 </body>

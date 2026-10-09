@@ -5,6 +5,7 @@ A classroom game for practicing regression by eye. Students drag two handles to 
 ## How it plays
 
 - 10 rounds per game, with a new random scatter plot each round (rising or falling trend).
+- Title screen with two modes: Play solo (the 10-round game) and Class game (placeholder for now; class mode with a code and live scoreboard is planned). Arrow keys and Enter work on the menu.
 - Retro arcade look: pixel fonts, a CRT-style plot screen, and a HUD with round, total and hi-score. Fonts load from Google Fonts.
 - On Next Round, every dot glides to its new spot after its own short random delay. Check Line is held until they land, and reduced-motion settings skip the animation.
 - Three difficulty levels. Easy is the tightest scatter, Medium is looser, and Hard is the loosest and adds two stray points that pull the true line toward them.
