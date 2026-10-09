@@ -102,6 +102,7 @@
   .tick { fill: var(--muted); font: 20px var(--body); }
   .axname { fill: var(--muted); font: 24px var(--body); }
   .dot { fill: var(--dot); shape-rendering: crispEdges; }
+  .dot.fly { transition: transform 0.75s cubic-bezier(0.34, 1.35, 0.5, 1), opacity 0.4s ease-out; }
   .you-line { stroke: var(--cyan); stroke-width: 4; filter: drop-shadow(0 0 5px var(--cyan)); }
   .best-line { stroke: var(--magenta); stroke-width: 4; filter: drop-shadow(0 0 5px var(--magenta)); }
   .best-line.draw { stroke-dasharray: var(--len); animation: draw 0.8s steps(16) both; }
@@ -132,6 +133,8 @@
   button:active { transform: translateY(4px); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 1px 0 0 #7a5d00; }
   #next { background: var(--cyan); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 5px 0 0 #006b7a; }
   #next:active { box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 1px 0 0 #006b7a; }
+  button:disabled { opacity: 0.55; cursor: default; }
+  button:disabled:active { transform: none; }
   button:focus-visible, select:focus-visible { outline: 3px dashed var(--ink); outline-offset: 4px; }
   .resid-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 1.3rem; color: var(--muted); }
   select { font: 1.3rem var(--body); padding: 4px 8px; border: 3px solid var(--edge); border-radius: 0; background: var(--screen); color: var(--ink); }
@@ -383,9 +386,54 @@
   /* ---------- rendering ---------- */
   var readout = document.getElementById('readout');
 
-  function renderPts() {
-    gPts.textContent = '';
-    for (var i = 0; i < pts.length; i++) el('rect', { x: X(pts[i].x) - 4.5, y: Y(pts[i].y) - 4.5, width: 9, height: 9, 'class': 'dot' }, gPts);
+  var dots = [], animating = false, animTimer = null;
+  function dotTransform(p) { return 'translate(' + (X(p.x) - 4.5).toFixed(1) + 'px,' + (Y(p.y) - 4.5).toFixed(1) + 'px)'; }
+  function reduceMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+  function finishAnim() { animating = false; clearTimeout(animTimer); btnCheck.disabled = false; }
+
+  /* Each dot is one persistent square. On a new round it glides from its old
+     spot to its new one after its own random delay. Extra dots fade in, spare dots fade out. */
+  function renderPts(animate) {
+    var go = animate && !reduceMotion();
+    var i, n;
+    for (i = 0; i < pts.length; i++) {
+      n = dots[i];
+      if (!n) {
+        n = el('rect', { width: 9, height: 9, 'class': 'dot' }, gPts);
+        n.style.transform = dotTransform(pts[i]);
+        if (go) n.style.opacity = '0';
+        dots[i] = n;
+      } else if (!go) {
+        n.classList.remove('fly');
+        n.style.transitionDelay = '0ms';
+        n.style.opacity = '';
+        n.style.transform = dotTransform(pts[i]);
+      }
+    }
+    if (!go) {
+      for (i = pts.length; i < dots.length; i++) if (dots[i].parentNode) dots[i].parentNode.removeChild(dots[i]);
+      dots.length = pts.length;
+      finishAnim();
+      return;
+    }
+    void svg.getBoundingClientRect();
+    for (i = 0; i < pts.length; i++) {
+      n = dots[i];
+      n.classList.add('fly');
+      n.style.transitionDelay = Math.round(Math.random() * 380) + 'ms';
+      n.style.opacity = '1';
+      n.style.transform = dotTransform(pts[i]);
+    }
+    dots.splice(pts.length).forEach(function (g) {
+      g.classList.add('fly');
+      g.style.transitionDelay = Math.round(Math.random() * 380) + 'ms';
+      g.style.opacity = '0';
+      setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 1300);
+    });
+    animating = true;
+    btnCheck.disabled = true;
+    clearTimeout(animTimer);
+    animTimer = setTimeout(finishAnim, 1200);
   }
   function clearReveal() {
     gGap.textContent = ''; gRes.textContent = '';
@@ -513,12 +561,12 @@
     hs = [{ x: 1.5, y: 5 }, { x: 8.5, y: 5 }];
     phase = 'place';
     clearReveal();
-    renderPts();
+    renderPts(dots.length > 0);
     ui();
   }
   function startGame() { round = 0; scores = []; newRecord = false; newRound(); }
   function check() {
-    if (phase !== 'place') return;
+    if (phase !== 'place' || animating) return;
     var you = lineFrom(hs[0], hs[1]);
     var g = gapBetween(you, best);
     var s = scoreFor(g);
