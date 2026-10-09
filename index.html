@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Base styles the artifact viewer normally supplies */
+  :root { color-scheme: light; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Fit the Line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: plot board on the left, live readout on the right; stacks to one column on phones. */
+  :root {
+    --bg: #eaf0f3;
+    --panel: #f8fbfc;
+    --ink: #13242c;
+    --muted: #55696f;
+    --grid: #d3dee3;
+    --rule: #b7c8cf;
+    --dot: #1b2f38;
+    --yours: #0a67b8;
+    --best: #c4235f;
+    --gapfill: rgba(196, 35, 95, 0.14);
+    --onaccent: #ffffff;
+    --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e181d;
+      --panel: #14232a;
+      --ink: #e4eef2;
+      --muted: #93a8b1;
+      --grid: #243840;
+      --rule: #34505b;
+      --dot: #c9dbe2;
+      --yours: #5db4ff;
+      --best: #ff7da6;
+      --gapfill: rgba(255, 125, 166, 0.16);
+      --onaccent: #06202f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e181d;
+    --panel: #14232a;
+    --ink: #e4eef2;
+    --muted: #93a8b1;
+    --grid: #243840;
+    --rule: #34505b;
+    --dot: #c9dbe2;
+    --yours: #5db4ff;
+    --best: #ff7da6;
+    --gapfill: rgba(255, 125, 166, 0.16);
+    --onaccent: #06202f;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--body);
+    padding-inline: 16px;
+    padding-block: 24px 40px;
+  }
+  .wrap { max-width: 1040px; margin-inline: auto; display: grid; gap: 20px; }
+
+  .top { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; }
+  .top > div { min-width: 0; flex: 1 1 320px; }
+  h1 { font: 700 clamp(2rem, 5vw, 2.9rem)/1 var(--display); letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; }
+  .lede { margin: 0; max-width: 60ch; color: var(--muted); }
+
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0; padding: 0; min-width: 0; background: var(--panel); }
+  .seg legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .seg label { position: relative; display: block; }
+  .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .seg span { display: block; padding: 9px 16px; font-weight: 500; cursor: pointer; }
+  .seg input:checked + span { background: var(--ink); color: var(--panel); }
+  .seg input:focus-visible + span { outline: 3px solid var(--yours); outline-offset: -3px; }
+
+  .layout { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  .board, .readout { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; min-width: 0; }
+  .status { display: flex; flex-wrap: wrap; gap: 4px 20px; justify-content: space-between; font: 500 13px/1.4 var(--mono); color: var(--muted); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  .status b { color: var(--ink); font-weight: 500; }
+
+  #plot { display: block; width: 100%; height: auto; max-width: 100%; }
+  .grid { stroke: var(--grid); stroke-width: 1; }
+  .grid.minor { opacity: 0.55; }
+  .frame { fill: none; stroke: var(--rule); stroke-width: 1.5; }
+  .tick { fill: var(--muted); font: 12px var(--mono); }
+  .axname { fill: var(--muted); font: italic 13px var(--body); }
+  .dot { fill: var(--dot); opacity: 0.9; }
+  .you-line { stroke: var(--yours); stroke-width: 3; stroke-linecap: round; }
+  .best-line { stroke: var(--best); stroke-width: 3; stroke-linecap: round; }
+  .best-line.draw { stroke-dasharray: var(--len); animation: draw 0.7s ease-out both; }
+  @keyframes draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+  .gap { fill: var(--gapfill); stroke: none; }
+  .res { stroke-width: 1.5; opacity: 0.75; }
+  .res.you { stroke: var(--yours); }
+  .res.best { stroke: var(--best); }
+  .handle { cursor: grab; touch-action: none; outline: none; }
+  .handle.locked { cursor: default; }
+  .hdot { fill: var(--yours); stroke: var(--panel); stroke-width: 3; }
+  .hring { fill: none; stroke: var(--yours); stroke-width: 2; opacity: 0.35; }
+  .handle:hover .hring, .handle:focus-visible .hring { opacity: 1; }
+  .handle.locked:hover .hring { opacity: 0.35; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .legend .l-you { background: var(--yours); }
+  .legend .l-best { background: var(--best); }
+  .legend .l-gap { background: var(--gapfill); height: 10px; border: 1px solid var(--best); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 14px; }
+  button { font: 600 15px var(--body); border: 0; border-radius: 8px; padding: 11px 20px; cursor: pointer; background: var(--yours); color: var(--onaccent); }
+  button:focus-visible, select:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .resid-wrap { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  select { font: 500 14px var(--body); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+
+  .readout h2 { font: 700 1.25rem/1.2 var(--display); margin: 0 0 10px; }
+  .hint { margin: 0 0 14px; color: var(--muted); }
+  .eq { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline; margin-bottom: 12px; }
+  .eq .sw { width: 12px; height: 12px; border-radius: 50%; align-self: center; grid-row: 1 / span 2; }
+  .eq .sw.you { background: var(--yours); }
+  .eq .sw.best { background: var(--best); }
+  .eq .name { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .eq code { font: 500 16px var(--mono); overflow-wrap: anywhere; }
+  .score { display: flex; align-items: baseline; gap: 12px; margin: 14px 0 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .score strong { font: 700 3rem/1 var(--display); font-variant-numeric: tabular-nums; }
+  .score span { color: var(--muted); }
+  .stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0 0 12px; font-size: 14px; }
+  .stats dt { color: var(--muted); }
+  .stats dd { margin: 0; font: 500 14px var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  .note { margin: 0; font-size: 13px; color: var(--muted); }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 90px; margin: 10px 0 14px; }
+  .bars span { flex: 1 1 0; min-width: 0; background: var(--yours); border-radius: 3px 3px 0 0; position: relative; }
+  .bars-labels { display: flex; gap: 6px; font: 11px var(--mono); color: var(--muted); margin-top: -10px; margin-bottom: 14px; }
+  .bars-labels span { flex: 1 1 0; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) { .best-line.draw { animation: none; stroke-dasharray: none; } }
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <div>
+      <h1>Fit the Line</h1>
+      <p class="lede">Drag the two handles so the line runs through the middle of the points. Press Check to see the least-squares regression line and how far apart the two are.</p>
+    </div>
+    <fieldset class="seg" id="levels">
+      <legend>Difficulty</legend>
+      <label><input type="radio" name="level" id="lv-easy" value="easy" checked><span>Easy</span></label>
+      <label><input type="radio" name="level" id="lv-medium" value="medium"><span>Medium</span></label>
+      <label><input type="radio" name="level" id="lv-hard" value="hard"><span>Hard</span></label>
+    </fieldset>
+  </header>
+
+  <div class="layout">
+    <section class="board" aria-label="Scatter plot">
+      <div class="status">
+        <span>Round <b id="roundNo">1</b> of <b id="roundMax">10</b></span>
+        <span>Total <b id="total">0</b></span>
+        <span id="bestLevel">Best average: &mdash;</span>
+      </div>
+      <svg id="plot" role="group" aria-label="Scatter plot with a draggable line. Use the two handles to place your line."></svg>
+      <div class="legend">
+        <span><i class="l-you"></i>Your line</span>
+        <span><i class="l-best"></i>Least-squares line</span>
+        <span><i class="l-gap"></i>Gap between them</span>
+      </div>
+      <div class="actions">
+        <button id="check" type="button">Check my line</button>
+        <button id="next" type="button" hidden>Next round</button>
+        <label class="resid-wrap" id="residWrap" hidden for="resid">Show residuals for
+          <select id="resid">
+            <option value="none">no line</option>
+            <option value="you">my line</option>
+            <option value="best">best-fit line</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="readout" id="readout" aria-live="polite"></section>
+  </div>
+</main>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  var W = 640, H = 480, M = { l: 46, r: 18, t: 18, b: 42 };
+  var PW = W - M.l - M.r, PH = H - M.t - M.b;
+  var ROUNDS = 10;
+  var LEVELS = {
+    easy:   { n: 30, lo: 0.7, hi: 1.1, out: 0, name: 'Easy' },
+    medium: { n: 40, lo: 1.1, hi: 1.7, out: 0, name: 'Medium' },
+    hard:   { n: 40, lo: 1.6, hi: 2.4, out: 2, name: 'Hard' }
+  };
+
+  function X(x) { return M.l + x / 10 * PW; }
+  function Y(y) { return M.t + (1 - y / 10) * PH; }
+  function IX(px) { return (px - M.l) / PW * 10; }
+  function IY(py) { return (1 - (py - M.t) / PH) * 10; }
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+  function el(name, attrs, parent) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  /* ---------- statistics ---------- */
+  function gauss() {
+    var u = 0, v = 0;
+    while (!u) u = Math.random();
+    while (!v) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function makeData(level) {
+    var L = LEVELS[level];
+    var m = (0.2 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1);
+    var yc = 3.5 + Math.random() * 3;
+    var sd = L.lo + Math.random() * (L.hi - L.lo);
+    var pts = [], guard = 0;
+    while (pts.length < L.n && guard++ < 5000) {
+      var x = 0.4 + Math.random() * 9.2;
+      var y = yc + m * (x - 5) + gauss() * sd;
+      if (y > 0.2 && y < 9.8) pts.push({ x: x, y: y });
+    }
+    for (var k = 0; k < L.out; k++) {
+      var p = pts[Math.floor(Math.random() * pts.length)];
+      var dir = p.y > 5 ? -1 : 1;
+      p.y = clamp(p.y + dir * (3 + Math.random() * 1.5), 0.2, 9.8);
+    }
+    return pts;
+  }
+  function fit(pts) {
+    var n = pts.length, sx = 0, sy = 0, i;
+    for (i = 0; i < n; i++) { sx += pts[i].x; sy += pts[i].y; }
+    var mx = sx / n, my = sy / n, sxx = 0, sxy = 0, syy = 0;
+    for (i = 0; i < n; i++) {
+      var dx = pts[i].x - mx, dy = pts[i].y - my;
+      sxx += dx * dx; sxy += dx * dy; syy += dy * dy;
+    }
+    var m = sxy / sxx;
+    return { m: m, b: my - m * mx, r: sxy / Math.sqrt(sxx * syy) };
+  }
+  function sse(pts, l) {
+    var s = 0;
+    for (var i = 0; i < pts.length; i++) { var e = pts[i].y - (l.m * pts[i].x + l.b); s += e * e; }
+    return s;
+  }
+  function lineFrom(a, b) { var m = (b.y - a.y) / (b.x - a.x); return { m: m, b: a.y - m * a.x }; }
+  function gapBetween(l1, l2) {
+    var s = 0;
+    for (var i = 0; i <= 100; i++) { var x = i / 10; s += Math.abs((l1.m - l2.m) * x + (l1.b - l2.b)); }
+    return s / 101;
+  }
+  function scoreFor(gap) { return Math.round(100 * Math.max(0, 1 - gap / 2)); }
+  function verdict(s) { return s >= 90 ? 'Very close' : s >= 75 ? 'Close' : s >= 50 ? 'In the right area' : 'Far from the best fit'; }
+  function eq(l) {
+    return 'y = ' + l.m.toFixed(2) + 'x ' + (l.b < 0 ? '−' : '+') + ' ' + Math.abs(l.b).toFixed(2);
+  }
+
+  /* ---------- svg scene ---------- */
+  var svg = document.getElementById('plot');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  var defs = el('defs', {}, svg);
+  var cp = el('clipPath', { id: 'plotclip' }, defs);
+  el('rect', { x: M.l, y: M.t, width: PW, height: PH }, cp);
+  var clip = { 'clip-path': 'url(#plotclip)' };
+  var gGrid = el('g', {}, svg);
+  var gGap = el('g', clip, svg);
+  var gRes = el('g', clip, svg);
+  var gPts = el('g', {}, svg);
+  var gBest = el('g', clip, svg);
+  var gYou = el('g', clip, svg);
+  var gHandles = el('g', {}, svg);
+
+  for (var i = 0; i <= 10; i++) {
+    var cls = 'grid' + (i % 2 ? ' minor' : '');
+    el('line', { x1: X(i), y1: M.t, x2: X(i), y2: H - M.b, 'class': cls }, gGrid);
+    el('line', { x1: M.l, y1: Y(i), x2: W - M.r, y2: Y(i), 'class': cls }, gGrid);
+  }
+  el('rect', { x: M.l, y: M.t, width: PW, height: PH, 'class': 'frame' }, gGrid);
+  for (var t = 0; t <= 10; t += 2) {
+    el('text', { x: X(t), y: H - M.b + 20, 'text-anchor': 'middle', 'class': 'tick' }, gGrid).textContent = t;
+    el('text', { x: M.l - 10, y: Y(t) + 4, 'text-anchor': 'end', 'class': 'tick' }, gGrid).textContent = t;
+  }
+  el('text', { x: W - M.r, y: H - 6, 'text-anchor': 'end', 'class': 'axname' }, gGrid).textContent = 'x';
+  el('text', { x: 14, y: M.t + 8, 'text-anchor': 'middle', 'class': 'axname' }, gGrid).textContent = 'y';
+
+  var youLine = el('line', { 'class': 'you-line' }, gYou);
+  var bestLine = el('line', { 'class': 'best-line', visibility: 'hidden' }, gBest);
+
+  function setLine(node, l) {
+    node.setAttribute('x1', X(0)); node.setAttribute('y1', Y(l.b));
+    node.setAttribute('x2', X(10)); node.setAttribute('y2', Y(10 * l.m + l.b));
+  }
+
+  /* ---------- state ---------- */
+  var level = 'easy', round = 0, scores = [], pts = [], best = null, last = null;
+  var phase = 'place', drag = null;
+  var hs = [{ x: 1.5, y: 5 }, { x: 8.5, y: 5 }];
+  var handleNodes = [];
+
+  function svgPoint(ev) {
+    var r = svg.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
+  }
+
+  function mkHandle(i, label) {
+    var g = el('g', { 'class': 'handle', tabindex: 0, role: 'slider', 'aria-label': label + ' handle. Arrow keys move it.', 'aria-valuemin': 0, 'aria-valuemax': 10 }, gHandles);
+    el('circle', { r: 26, fill: 'transparent' }, g);
+    el('circle', { r: 14, 'class': 'hring' }, g);
+    el('circle', { r: 8, 'class': 'hdot' }, g);
+    g.addEventListener('pointerdown', function (e) {
+      if (phase !== 'place') return;
+      e.preventDefault();
+      g.setPointerCapture(e.pointerId);
+      drag = i;
+      g.focus({ preventScroll: true });
+    });
+    g.addEventListener('pointermove', function (e) {
+      if (drag !== i) return;
+      var p = svgPoint(e);
+      moveHandle(i, IX(p.x), IY(p.y));
+    });
+    g.addEventListener('pointerup', function () { drag = null; });
+    g.addEventListener('pointercancel', function () { drag = null; });
+    g.addEventListener('keydown', function (e) {
+      if (phase !== 'place') return;
+      var step = e.shiftKey ? 0.5 : 0.1, dx = 0, dy = 0;
+      if (e.key === 'ArrowLeft') dx = -step;
+      else if (e.key === 'ArrowRight') dx = step;
+      else if (e.key === 'ArrowUp') dy = step;
+      else if (e.key === 'ArrowDown') dy = -step;
+      else return;
+      e.preventDefault();
+      moveHandle(i, hs[i].x + dx, hs[i].y + dy);
+    });
+    handleNodes.push(g);
+  }
+  mkHandle(0, 'Left');
+  mkHandle(1, 'Right');
+  svg.addEventListener('touchmove', function (e) { if (drag !== null) e.preventDefault(); }, { passive: false });
+
+  function moveHandle(i, x, y) {
+    hs[i].x = clamp(x, i ? 5.5 : 0, i ? 10 : 4.5);
+    hs[i].y = clamp(y, 0, 10);
+    renderYou();
+  }
+
+  /* ---------- rendering ---------- */
+  var readout = document.getElementById('readout');
+
+  function renderPts() {
+    gPts.textContent = '';
+    for (var i = 0; i < pts.length; i++) el('circle', { cx: X(pts[i].x), cy: Y(pts[i].y), r: 4.5, 'class': 'dot' }, gPts);
+  }
+  function clearReveal() {
+    gGap.textContent = ''; gRes.textContent = '';
+    bestLine.setAttribute('visibility', 'hidden');
+    bestLine.classList.remove('draw');
+    document.getElementById('resid').value = 'none';
+  }
+  function renderYou() {
+    for (var i = 0; i < 2; i++) {
+      handleNodes[i].setAttribute('transform', 'translate(' + X(hs[i].x) + ' ' + Y(hs[i].y) + ')');
+      handleNodes[i].setAttribute('aria-valuenow', hs[i].y.toFixed(1));
+      handleNodes[i].classList.toggle('locked', phase !== 'place');
+    }
+    var l = lineFrom(hs[0], hs[1]);
+    setLine(youLine, l);
+    if (phase === 'place') renderReadout();
+  }
+  function renderResid() {
+    gRes.textContent = '';
+    var which = document.getElementById('resid').value;
+    if (which === 'none' || !last) return;
+    var l = which === 'you' ? last.you : best;
+    for (var i = 0; i < pts.length; i++) {
+      var yh = l.m * pts[i].x + l.b;
+      el('line', { x1: X(pts[i].x), y1: Y(pts[i].y), x2: X(pts[i].x), y2: Y(yh), 'class': 'res ' + which }, gRes);
+    }
+  }
+  function renderReveal() {
+    var y = last.you;
+    var poly = [[0, y.b], [10, 10 * y.m + y.b], [10, 10 * best.m + best.b], [0, best.b]]
+      .map(function (p) { return X(p[0]) + ',' + Y(p[1]); }).join(' ');
+    gGap.textContent = '';
+    el('polygon', { points: poly, 'class': 'gap' }, gGap);
+    setLine(bestLine, best);
+    var len = Math.hypot(X(10) - X(0), Y(10 * best.m + best.b) - Y(best.b));
+    bestLine.style.setProperty('--len', len.toFixed(1));
+    bestLine.setAttribute('visibility', 'visible');
+    bestLine.classList.remove('draw');
+    void bestLine.getBoundingClientRect();
+    bestLine.classList.add('draw');
+    renderResid();
+  }
+
+  function readoutPlace() {
+    var l = lineFrom(hs[0], hs[1]);
+    readout.innerHTML =
+      '<h2>Place your line</h2>' +
+      '<p class="hint">Drag each handle, or focus one and use the arrow keys. A good fit has about as many points above the line as below it.</p>' +
+      '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(l) + '</code></div>';
+  }
+  function readoutReveal() {
+    var d = last.you.m - best.m;
+    var slopeNote = Math.abs(d) < 0.005 ? 'Your slope matches the best fit.' :
+      'Your slope is ' + Math.abs(d).toFixed(2) + (d > 0 ? ' higher' : ' lower') + ' than the best fit.';
+    readout.innerHTML =
+      '<h2>Result</h2>' +
+      '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(last.you) + '</code></div>' +
+      '<div class="eq"><span class="sw best"></span><span class="name">Least-squares line</span><code>' + eq(best) + '</code></div>' +
+      '<div class="score"><strong>' + last.s + '</strong><span>' + verdict(last.s) + '</span></div>' +
+      '<dl class="stats">' +
+        '<dt>Average gap between lines</dt><dd>' + last.g.toFixed(2) + ' units</dd>' +
+        '<dt>SSE, your line</dt><dd>' + last.sseY.toFixed(1) + '</dd>' +
+        '<dt>SSE, best-fit line</dt><dd>' + last.sseB.toFixed(1) + '</dd>' +
+        '<dt>Correlation r</dt><dd>' + best.r.toFixed(2) + '</dd>' +
+      '</dl>' +
+      '<p class="note">' + slopeNote + ' SSE is the sum of the squared vertical distances from the points to a line. The least-squares line has the smallest SSE of any line. Use the residuals menu to see those distances.</p>';
+  }
+  function readoutDone() {
+    var total = scores.reduce(function (a, b) { return a + b; }, 0);
+    var avg = Math.round(total / scores.length);
+    var bestRound = Math.max.apply(null, scores), worst = Math.min.apply(null, scores);
+    var bars = scores.map(function (s, i) {
+      return '<span style="height:' + Math.max(4, s) + '%" title="Round ' + (i + 1) + ': ' + s + '"></span>';
+    }).join('');
+    var labels = scores.map(function (s, i) { return '<span>' + s + '</span>'; }).join('');
+    var pb = loadBest()[level];
+    readout.innerHTML =
+      '<h2>Game over</h2>' +
+      '<div class="score"><strong>' + avg + '</strong><span>average per round, ' + LEVELS[level].name + '</span></div>' +
+      '<div class="bars" role="img" aria-label="Scores by round: ' + scores.join(', ') + '">' + bars + '</div>' +
+      '<div class="bars-labels">' + labels + '</div>' +
+      '<dl class="stats">' +
+        '<dt>Total</dt><dd>' + total + ' / ' + (ROUNDS * 100) + '</dd>' +
+        '<dt>Best round</dt><dd>' + bestRound + '</dd>' +
+        '<dt>Weakest round</dt><dd>' + worst + '</dd>' +
+        '<dt>Your best average here</dt><dd>' + (pb != null ? pb : '—') + '</dd>' +
+      '</dl>' +
+      '<p class="note">Try a harder level. On Hard, a couple of stray points pull the least-squares line toward them, so watch where it ends up.</p>';
+  }
+  function renderReadout() {
+    if (phase === 'place') readoutPlace();
+    else if (phase === 'revealed') readoutReveal();
+    else readoutDone();
+  }
+
+  function loadBest() { try { return JSON.parse(localStorage.getItem('fitline-best') || '{}'); } catch (e) { return {}; } }
+  function saveBest(lv, v) {
+    try { var b = loadBest(); if (!(b[lv] >= v)) { b[lv] = v; localStorage.setItem('fitline-best', JSON.stringify(b)); } } catch (e) {}
+  }
+
+  var btnCheck = document.getElementById('check');
+  var btnNext = document.getElementById('next');
+  var residWrap = document.getElementById('residWrap');
+  function ui() {
+    document.getElementById('roundNo').textContent = Math.min(round, ROUNDS);
+    document.getElementById('roundMax').textContent = ROUNDS;
+    document.getElementById('total').textContent = scores.reduce(function (a, b) { return a + b; }, 0);
+    var pb = loadBest()[level];
+    document.getElementById('bestLevel').textContent = 'Best average (' + LEVELS[level].name + '): ' + (pb != null ? pb : '—');
+    btnCheck.hidden = phase !== 'place';
+    btnNext.hidden = phase === 'place';
+    residWrap.hidden = phase !== 'revealed';
+    btnNext.textContent = phase === 'done' ? 'Play again' : (round >= ROUNDS ? 'See results' : 'Next round');
+    renderYou();
+    renderReadout();
+  }
+
+  /* ---------- flow ---------- */
+  function newRound() {
+    round++;
+    pts = makeData(level);
+    best = fit(pts);
+    last = null;
+    hs = [{ x: 1.5, y: 5 }, { x: 8.5, y: 5 }];
+    phase = 'place';
+    clearReveal();
+    renderPts();
+    ui();
+  }
+  function startGame() { round = 0; scores = []; newRound(); }
+  function check() {
+    if (phase !== 'place') return;
+    var you = lineFrom(hs[0], hs[1]);
+    var g = gapBetween(you, best);
+    var s = scoreFor(g);
+    scores.push(s);
+    last = { you: you, g: g, s: s, sseY: sse(pts, you), sseB: sse(pts, best) };
+    phase = 'revealed';
+    renderReveal();
+    ui();
+  }
+  function next() {
+    if (phase === 'revealed') {
+      if (round >= ROUNDS) {
+        phase = 'done';
+        var avg = Math.round(scores.reduce(function (a, b) { return a + b; }, 0) / scores.length);
+        saveBest(level, avg);
+        ui();
+      } else newRound();
+    } else if (phase === 'done') startGame();
+  }
+
+  btnCheck.addEventListener('click', check);
+  btnNext.addEventListener('click', next);
+  document.getElementById('resid').addEventListener('change', renderResid);
+  document.getElementById('levels').addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'level') { level = e.target.value; startGame(); }
+  });
+
+  startGame();
+})();
+</script>
+</body>
+</html>
