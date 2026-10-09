@@ -252,7 +252,7 @@
   <h2 id="hostTitle">Launch a class game</h2>
   <p class="banner" id="hostBanner" hidden></p>
   <div id="hostLogin">
-    <p class="hint">Could not reach the class server.</p>
+    <p class="hint" id="hostLoginHint">Connecting to the class server...</p>
     <div class="row"><button id="hostSignIn" type="button">Try again</button><button class="small" id="hostBack1" type="button">Back</button></div>
     <p class="err" id="hostLoginMsg" role="alert" hidden></p>
   </div>
@@ -697,7 +697,7 @@
     if (c === 'auth/unauthorized-domain') return 'This site address is not authorized for sign-in yet. Add it under Authentication, Settings, Authorized domains.';
     if (c === 'auth/operation-not-allowed') return 'That sign-in method is not turned on in the Firebase console yet.';
     if (c.indexOf('auth/') === 0) return 'Sign-in failed (' + c + ').';
-    return 'Something went wrong. Check your connection and try again.';
+    return 'Something went wrong' + (c ? ' (' + c + ')' : e && e.message ? ' (' + String(e.message).slice(0, 80) + ')' : '') + '. Check your connection and try again.';
   }
   function say(id, msg) { var n = $(id); n.textContent = msg || ''; n.hidden = !msg; }
 
@@ -1140,11 +1140,11 @@
 
   $('hostClass').addEventListener('click', function () {
     showView('host');
-    $('hostLogin').hidden = false; $('hostSetup').hidden = true; say('hostLoginMsg', '');
+    $('hostLogin').hidden = false; $('hostSetup').hidden = true; say('hostLoginMsg', ''); $('hostLoginHint').textContent = 'Connecting to the class server...'; $('hostSignIn').hidden = true;
     useBackend().then(function (b) {
       banner('hostBanner', b);
-      return b.currentTeacher().then(function (u) { if (u) showSetup(b, u); else $('hostSignIn').focus({ preventScroll: true }); });
-    }).catch(function (e) { say('hostLoginMsg', friendly(e)); });
+      return b.currentTeacher().then(function (u) { if (u) showSetup(b, u); else { $('hostLoginHint').textContent = 'Could not start a class.'; $('hostSignIn').hidden = false; } });
+    }).catch(function (e) { $('hostLoginHint').textContent = 'Could not reach the class server.'; $('hostSignIn').hidden = false; say('hostLoginMsg', friendly(e)); });
   });
   $('hostBack1').addEventListener('click', function () { showView('start', 'hostClass'); });
   $('hostBack2').addEventListener('click', function () { showView('start', 'hostClass'); });
