@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // Only these Google accounts may launch a class. Replace the placeholders with real addresses.
+    function isTeacher() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['TEACHER_EMAIL_1', 'TEACHER_EMAIL_2'];
+    }
+
+    function classDoc(code) {
+      return get(/databases/$(database)/documents/classes/$(code)).data;
+    }
+
+    match /classes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if isTeacher()
+        && code.matches('[A-Z]{4}')
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.level in ['easy', 'medium', 'hard']
+        && request.resource.data.rounds is int
+        && request.resource.data.rounds >= 1
+        && request.resource.data.rounds <= 20;
+
+      allow update: if signedIn()
+        && resource.data.hostUid == request.auth.uid
+        && request.resource.data.hostUid == resource.data.hostUid;
+      allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+
+      match /players/{uid} {
+        allow get: if signedIn()
+          && (request.auth.uid == uid || classDoc(code).hostUid == request.auth.uid);
+        allow list, delete: if signedIn() && classDoc(code).hostUid == request.auth.uid;
+
+        allow create: if signedIn()
+          && request.auth.uid == uid
+          && classDoc(code).phase != 'done'
+          && request.resource.data.keys().hasOnly(['name', 'joinedAt', 'lines'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1
+          && request.resource.data.name.size() <= 16
+          && request.resource.data.lines == {};
+
+        // A student may add exactly one line, for the current round, while guessing is open.
+        allow update: if signedIn()
+          && request.auth.uid == uid
+          && classDoc(code).phase == 'guess'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lines'])
+          && request.resource.data.lines.diff(resource.data.lines).addedKeys()
+               .hasOnly(['r' + string(classDoc(code).round)])
+          && request.resource.data.lines.diff(resource.data.lines).changedKeys().size() == 0
+          && request.resource.data.lines['r' + string(classDoc(code).round)] is list
+          && request.resource.data.lines['r' + string(classDoc(code).round)].size() == 4;
+      }
+    }
+  }
+}

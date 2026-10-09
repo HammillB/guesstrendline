@@ -1,20 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  /* Base styles the artifact viewer normally supplies */
-  body { margin: 0; }
-  img { max-width: 100%; }
-  [hidden] { display: none !important; }
-</style>
-<title>Fit the Line</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style><title>Fit the Line</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
-  /* Layout: arcade cabinet. HUD strip over a CRT plot screen on the left, score readout on the right; stacks on phones.
+  /* Layout: arcade cabinet. HUD strip over a CRT plot screen on the left, readout on the right; stacks on phones.
      One committed look (dark neon), so there is no light/dark switch. */
   :root {
     --bg: #0b0a1e;
@@ -95,7 +84,7 @@
       radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, 0.4) 100%),
       repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 3px);
   }
-  #plot { display: block; width: 100%; height: auto; max-width: 100%; }
+  .screen svg { display: block; width: 100%; height: auto; max-width: 100%; }
   .plotbg { fill: var(--screen); }
   .grid { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
   .grid.minor { opacity: 0.5; }
@@ -106,6 +95,7 @@
   .dot.fly { transition: transform 0.75s cubic-bezier(0.34, 1.35, 0.5, 1), opacity 0.4s ease-out; }
   .you-line { stroke: var(--cyan); stroke-width: 4; filter: drop-shadow(0 0 5px var(--cyan)); }
   .best-line { stroke: var(--magenta); stroke-width: 4; filter: drop-shadow(0 0 5px var(--magenta)); }
+  .crowd-line { stroke: var(--cyan); stroke-width: 2; opacity: 0.32; }
   .best-line.draw { stroke-dasharray: var(--len); animation: draw 0.8s steps(16) both; }
   @keyframes draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
   .gap { fill: var(--gapfill); stroke: none; }
@@ -136,13 +126,14 @@
   #next:active, .alt:active { box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 1px 0 0 #006b7a; }
   .small { padding: 11px 14px; font-size: 0.62rem; background: var(--screen); color: var(--muted); border: 3px solid var(--edge); box-shadow: none; }
   .small:active { box-shadow: none; }
+  .small.warn { color: var(--magenta); border-color: var(--magenta); }
   button:disabled { opacity: 0.55; cursor: default; }
   button:disabled:active { transform: none; }
-  button:focus-visible, select:focus-visible { outline: 3px dashed var(--ink); outline-offset: 4px; }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px dashed var(--ink); outline-offset: 4px; }
   .resid-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 1.3rem; color: var(--muted); }
   select { font: 1.3rem var(--body); padding: 4px 8px; border: 3px solid var(--edge); border-radius: 0; background: var(--screen); color: var(--ink); }
 
-  .readout h2, .classview h2 { font: 400 0.85rem/1.4 var(--display); color: var(--cyan); text-transform: uppercase; margin: 0 0 16px; }
+  .readout h2, .classview h2, .board h2 { font: 400 0.85rem/1.4 var(--display); color: var(--cyan); text-transform: uppercase; margin: 0 0 16px; }
   .hint { margin: 0 0 18px; color: var(--muted); font-size: 1.35rem; }
   .eq { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; margin-bottom: 16px; }
   .eq .sw { width: 14px; height: 14px; grid-row: 1 / span 2; }
@@ -169,7 +160,6 @@
   .start h1 { font-size: clamp(1.6rem, 6.8vw, 3rem); }
   .tagline { margin: 0; font-size: 1.7rem; color: var(--muted); }
   .hero { max-width: 360px; width: 100%; margin: 3px auto; }
-  .hero svg { display: block; width: 100%; height: auto; }
   .hero .you-line, .hero .best-line { stroke-width: 3; }
   .prompt { margin: 0; font: 400 0.7rem/1.4 var(--display); color: var(--yellow); text-transform: uppercase; animation: blink 1.1s steps(2) infinite; }
   .menu { display: grid; gap: 22px; padding-bottom: 6px; }
@@ -177,18 +167,57 @@
   .menu-btn small { display: block; margin-top: 10px; font: 1.35rem/1.15 var(--body); text-transform: none; }
   .menu-btn .go { display: inline-block; width: 0; height: 0; margin-right: 14px; border-left: 10px solid currentColor; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
   .menu-btn:hover .go, .menu-btn:focus-visible .go { animation: blink 0.8s steps(2) infinite; }
+  .menu-btn.third { background: var(--magenta); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 5px 0 0 #8a1450; }
+
+  /* Forms, banners, class screens */
   .classview { max-width: 600px; margin: 4px auto; }
   .classview .hint { margin-bottom: 22px; }
+  .form { display: grid; gap: 20px; }
+  .field { display: grid; gap: 8px; }
+  .field label, .field .lab { font: 400 0.6rem/1.4 var(--display); text-transform: uppercase; color: var(--muted); }
+  input[type="text"] {
+    font: 1.9rem/1.1 var(--body); width: 100%; box-sizing: border-box; padding: 10px 12px;
+    background: var(--screen); color: var(--ink); border: 3px solid var(--edge); border-radius: 0;
+  }
+  #joinCode { text-transform: uppercase; letter-spacing: 0.35em; font-size: 2.4rem; }
+  .err { margin: 0; color: var(--magenta); font-size: 1.4rem; }
+  .banner { margin: 0 0 20px; padding: 10px 12px; border: 3px dashed var(--yellow); color: var(--yellow); font-size: 1.3rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
+
+  /* Host room */
+  .bigcode { font: 400 clamp(2.4rem, 12vw, 5.5rem)/1 var(--display); color: var(--yellow); letter-spacing: 0.12em; text-shadow: 6px 6px 0 var(--magenta); margin: 8px 0 18px; }
+  .joinurl { font-size: 1.7rem; color: var(--muted); margin: 0 0 24px; overflow-wrap: anywhere; }
+  .joinurl b { color: var(--ink); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 44px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; background: var(--screen); border: 3px solid var(--edge); padding: 4px 10px; font-size: 1.5rem; }
+  .chip.ok { border-color: var(--cyan); color: var(--cyan); }
+  .chip .x { padding: 0 6px; font: 1.3rem var(--body); text-transform: none; background: transparent; color: var(--magenta); border: 0; box-shadow: none; }
+  .meter { display: flex; gap: 4px; margin: 6px 0 18px; }
+  .meter i { flex: 1 1 0; height: 14px; background: var(--grid); }
+  .meter i.on { background: var(--cyan); }
+  .rank { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 6px; }
+  .rank li { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto 3.6em; gap: 10px; align-items: baseline; font-size: 1.55rem; padding: 4px 8px; background: var(--screen); }
+  .rank .pos { font: 400 0.7rem var(--display); color: var(--muted); }
+  .rank .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank .rs { color: var(--cyan); font-variant-numeric: tabular-nums; }
+  .rank .tt { text-align: right; color: var(--yellow); font-variant-numeric: tabular-nums; }
+  .rank li.me { outline: 3px solid var(--cyan); }
+  .rank li.r1 .pos { color: var(--yellow); }
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 14px; margin: 10px 0 28px; }
+  .podium div { flex: 1 1 0; max-width: 200px; min-width: 0; text-align: center; }
+  .podium .pn { font-size: 1.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .podium .ps { font: 400 0.8rem var(--display); color: var(--yellow); margin: 6px 0 8px; }
+  .podium .blk { display: grid; place-items: center; font: 400 1.4rem var(--display); color: var(--dark); background: var(--cyan); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4); }
+  .podium .p1 .blk { height: 150px; background: var(--yellow); }
+  .podium .p2 .blk { height: 110px; }
+  .podium .p3 .blk { height: 80px; background: var(--magenta); }
 
   @media (prefers-reduced-motion: reduce) {
     .best-line.draw { animation: none; stroke-dasharray: none; }
     .record, .prompt, .menu-btn .go { animation: none !important; }
   }
-</style>
-
-</head>
-<body>
-<main>
+</style></head><body><main>
+<!-- Title screen -->
 <section class="start" id="startView">
   <div>
     <h1>Fit the Line</h1>
@@ -200,16 +229,96 @@
   <p class="prompt">Select mode</p>
   <div class="menu" id="menu">
     <button class="menu-btn" id="playSolo" type="button"><span class="go"></span>Play solo<small>One player, 10 rounds. Beat your hi-score.</small></button>
-    <button class="menu-btn alt" id="playClass" type="button"><span class="go"></span>Class game<small>Teacher launches a class. Students join with a code.</small></button>
+    <button class="menu-btn alt" id="joinClass" type="button"><span class="go"></span>Join a class<small>Enter the code your teacher put on the board.</small></button>
+    <button class="menu-btn third" id="hostClass" type="button"><span class="go"></span>Launch a class game<small>Teachers only. Start a class and get a code.</small></button>
+    <button class="menu-btn alt" id="rejoin" type="button" hidden><span class="go"></span><span id="rejoinText">Rejoin class</span><small>You were playing in a class. Pick up where you left off.</small></button>
   </div>
 </section>
 
-<section class="classview board" id="classView" hidden aria-labelledby="classTitle">
-  <h2 id="classTitle">Class game</h2>
-  <p class="hint">Class mode is still being built. Soon you will launch a class here, put a code on the board, and students will join from their own devices with just a name.</p>
-  <button class="small" id="classBack" type="button">Back</button>
+<!-- Student: join -->
+<section class="classview board" id="joinView" hidden aria-labelledby="joinTitle">
+  <h2 id="joinTitle">Join a class</h2>
+  <p class="banner" id="joinBanner" hidden></p>
+  <form class="form" id="joinForm" autocomplete="off">
+    <div class="field"><label for="joinCode">Class code</label><input type="text" id="joinCode" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
+    <div class="field"><label for="joinName">Your name</label><input type="text" id="joinName" maxlength="16" autocomplete="off" spellcheck="false"></div>
+    <p class="err" id="joinMsg" role="alert" hidden></p>
+    <div class="row"><button id="joinGo" type="submit">Join</button><button class="small" id="joinBack" type="button">Back</button></div>
+  </form>
 </section>
 
+<!-- Teacher: sign in and set up -->
+<section class="classview board" id="hostView" hidden aria-labelledby="hostTitle">
+  <h2 id="hostTitle">Launch a class game</h2>
+  <p class="banner" id="hostBanner" hidden></p>
+  <div id="hostLogin">
+    <p class="hint">Sign in with your teacher Google account to create a class. Students do not need an account.</p>
+    <div class="row"><button id="hostSignIn" type="button">Sign in with Google</button><button class="small" id="hostBack1" type="button">Back</button></div>
+    <p class="err" id="hostLoginMsg" role="alert" hidden></p>
+  </div>
+  <div class="form" id="hostSetup" hidden>
+    <div class="field">
+      <span class="lab" id="hostLevelLab">Difficulty</span>
+      <fieldset class="seg" id="hostLevels" aria-labelledby="hostLevelLab">
+        <label><input type="radio" name="hlevel" id="hl-easy" value="easy"><span>Easy</span></label>
+        <label><input type="radio" name="hlevel" id="hl-medium" value="medium" checked><span>Medium</span></label>
+        <label><input type="radio" name="hlevel" id="hl-hard" value="hard"><span>Hard</span></label>
+      </fieldset>
+    </div>
+    <div class="field">
+      <label for="hostRounds">Rounds</label>
+      <select id="hostRounds"><option value="5">5</option><option value="10" selected>10</option><option value="15">15</option></select>
+    </div>
+    <p class="err" id="hostSetupMsg" role="alert" hidden></p>
+    <div class="row"><button id="hostCreate" type="button">Create class</button><button class="alt" id="hostResume" type="button" hidden>Resume class</button><button class="small" id="hostBack2" type="button">Back</button></div>
+  </div>
+</section>
+
+<!-- Teacher: class room -->
+<div class="wrap" id="roomView" hidden>
+  <header class="top">
+    <div><h1>Class <span id="roomCode"></span></h1><p class="lede" id="roomSub"></p></div>
+    <div class="ctl"><button class="small warn" id="endClass" type="button">End class</button></div>
+  </header>
+  <p class="err" id="roomMsg" role="alert" hidden></p>
+
+  <section class="board" id="roomLobby" hidden>
+    <p class="prompt">Join with this code</p>
+    <div class="bigcode" id="bigCode"></div>
+    <p class="joinurl">Go to <b id="joinUrl"></b> and press <b>Join a class</b>.</p>
+    <h2>Players <span id="playerCount"></span></h2>
+    <div class="chips" id="chips"></div>
+    <div class="actions"><button id="startGame" type="button">Start game</button></div>
+  </section>
+
+  <div class="layout" id="roomRound" hidden>
+    <section class="board">
+      <div class="status">
+        <span>Round <b id="hRound">01</b>/<b id="hRounds">10</b></span>
+        <span id="hLocked">Locked 0/0</span>
+        <span id="hLevel">Medium</span>
+      </div>
+      <div class="screen"><svg id="hostPlot" role="img" aria-label="The scatter plot all students are fitting"></svg></div>
+      <div class="legend">
+        <span><i class="l-you"></i>Student lines</span>
+        <span><i class="l-best"></i>Least-squares line</span>
+      </div>
+      <div class="actions">
+        <button id="hostReveal" type="button">Reveal</button>
+        <button id="hostNext" type="button" hidden>Next round</button>
+      </div>
+    </section>
+    <section class="readout" id="hostPanel" aria-live="polite"></section>
+  </div>
+
+  <section class="board" id="roomDone" hidden>
+    <h2>Final standings</h2>
+    <div id="doneBody"></div>
+    <div class="actions"><button id="csvBtn" type="button">Download scores</button></div>
+  </section>
+</div>
+
+<!-- Solo game and student game screen -->
 <div class="wrap" id="gameView" hidden>
   <header class="top">
     <div>
@@ -262,10 +371,11 @@
 
 <script>
 (function () {
+  'use strict';
   var NS = 'http://www.w3.org/2000/svg';
   var W = 640, H = 480, M = { l: 52, r: 18, t: 18, b: 58 };
   var PW = W - M.l - M.r, PH = H - M.t - M.b;
-  var ROUNDS = 10;
+  var SOLO_ROUNDS = 10;
   var LEVELS = {
     easy:   { n: 30, lo: 0.7, hi: 1.1, out: 0, name: 'Easy' },
     medium: { n: 40, lo: 1.1, hi: 1.7, out: 0, name: 'Medium' },
@@ -278,35 +388,61 @@
   function IY(py) { return (1 - (py - M.t) / PH) * 10; }
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
   function pad(n, w) { var s = String(n); while (s.length < w) s = '0' + s; return s; }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
     if (parent) parent.appendChild(e);
     return e;
   }
+  function reduceMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+  function store(key, val) {
+    try {
+      if (val === undefined) { var v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
+      if (val === null) localStorage.removeItem(key); else localStorage.setItem(key, JSON.stringify(val));
+    } catch (e) {}
+    return null;
+  }
 
   /* ---------- statistics ---------- */
-  function gauss() {
+  /* Seeded generator, so every student in a class sees the same dots in the same round. */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function hashSeed(seed, n) {
+    var h = (seed ^ Math.imul(n + 1, 0x9E3779B1)) >>> 0;
+    h = Math.imul(h ^ (h >>> 16), 0x85EBCA6B);
+    h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35);
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+  function gauss(rnd) {
     var u = 0, v = 0;
-    while (!u) u = Math.random();
-    while (!v) v = Math.random();
+    while (!u) u = rnd();
+    while (!v) v = rnd();
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
-  function makeData(level) {
+  function makeData(level, rnd) {
+    rnd = rnd || Math.random;
     var L = LEVELS[level];
-    var m = (0.2 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1);
-    var yc = 3.5 + Math.random() * 3;
-    var sd = L.lo + Math.random() * (L.hi - L.lo);
+    var m = (0.2 + rnd() * 0.7) * (rnd() < 0.5 ? -1 : 1);
+    var yc = 3.5 + rnd() * 3;
+    var sd = L.lo + rnd() * (L.hi - L.lo);
     var pts = [], guard = 0;
     while (pts.length < L.n && guard++ < 5000) {
-      var x = 0.4 + Math.random() * 9.2;
-      var y = yc + m * (x - 5) + gauss() * sd;
+      var x = 0.4 + rnd() * 9.2;
+      var y = yc + m * (x - 5) + gauss(rnd) * sd;
       if (y > 0.2 && y < 9.8) pts.push({ x: x, y: y });
     }
     for (var k = 0; k < L.out; k++) {
-      var p = pts[Math.floor(Math.random() * pts.length)];
+      var p = pts[Math.floor(rnd() * pts.length)];
       var dir = p.y > 5 ? -1 : 1;
-      p.y = clamp(p.y + dir * (3 + Math.random() * 1.5), 0.2, 9.8);
+      p.y = clamp(p.y + dir * (3 + rnd() * 1.5), 0.2, 9.8);
     }
     return pts;
   }
@@ -334,60 +470,253 @@
   }
   function scoreFor(gap) { return Math.round(100 * Math.max(0, 1 - gap / 2)); }
   function verdict(s) { return s >= 90 ? 'Excellent!' : s >= 75 ? 'Great shot' : s >= 50 ? 'Not bad' : 'Keep trying'; }
-  function eq(l) {
-    return 'y = ' + l.m.toFixed(2) + 'x ' + (l.b < 0 ? '-' : '+') + ' ' + Math.abs(l.b).toFixed(2);
+  function eq(l) { return 'y = ' + l.m.toFixed(2) + 'x ' + (l.b < 0 ? '-' : '+') + ' ' + Math.abs(l.b).toFixed(2); }
+
+  /* A class round is fully determined by the class seed, so the host can re-score every student's saved line. */
+  function roundData(level, seed, n) { var pts = makeData(level, mulberry32(hashSeed(seed, n))); return { pts: pts, best: fit(pts) }; }
+  function lineFromArr(a) {
+    if (!a || a.length !== 4) return null;
+    for (var i = 0; i < 4; i++) if (typeof a[i] !== 'number' || !isFinite(a[i])) return null;
+    if (a[2] - a[0] < 0.5) return null;
+    return lineFrom({ x: a[0], y: a[1] }, { x: a[2], y: a[3] });
+  }
+  function scoreLine(arr, best) { var l = lineFromArr(arr); return l ? scoreFor(gapBetween(l, best)) : 0; }
+
+  /* ---------- plot scene (grid, dots, lines) ---------- */
+  var sceneN = 0;
+  function Scene(svg) {
+    var S = { dots: [], timer: null }, id = 'plotclip' + (++sceneN), i;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var cp = el('clipPath', { id: id }, el('defs', {}, svg));
+    el('rect', { x: M.l, y: M.t, width: PW, height: PH }, cp);
+    var clip = { 'clip-path': 'url(#' + id + ')' };
+    var gGrid = el('g', {}, svg);
+    S.gGap = el('g', clip, svg);
+    S.gRes = el('g', clip, svg);
+    S.gCrowd = el('g', clip, svg);
+    S.gPts = el('g', {}, svg);
+    var gBest = el('g', clip, svg);
+    var gYou = el('g', clip, svg);
+    S.gHandles = el('g', {}, svg);
+    S.svg = svg;
+
+    el('rect', { x: 0, y: 0, width: W, height: H, 'class': 'plotbg' }, gGrid);
+    for (i = 0; i <= 10; i++) {
+      var cls = 'grid' + (i % 2 ? ' minor' : '');
+      el('line', { x1: X(i), y1: M.t, x2: X(i), y2: H - M.b, 'class': cls }, gGrid);
+      el('line', { x1: M.l, y1: Y(i), x2: W - M.r, y2: Y(i), 'class': cls }, gGrid);
+    }
+    el('rect', { x: M.l, y: M.t, width: PW, height: PH, 'class': 'frame' }, gGrid);
+    for (var t = 0; t <= 10; t += 2) {
+      el('text', { x: X(t), y: H - M.b + 26, 'text-anchor': 'middle', 'class': 'tick' }, gGrid).textContent = t;
+      el('text', { x: M.l - 12, y: Y(t) + 6, 'text-anchor': 'end', 'class': 'tick' }, gGrid).textContent = t;
+    }
+    el('text', { x: M.l + PW / 2, y: H - 8, 'text-anchor': 'middle', 'class': 'axname' }, gGrid).textContent = 'x';
+    el('text', { x: 14, y: M.t + PH / 2, 'text-anchor': 'middle', 'class': 'axname', transform: 'rotate(-90 14 ' + (M.t + PH / 2) + ')' }, gGrid).textContent = 'y';
+
+    S.you = el('line', { 'class': 'you-line', visibility: 'hidden' }, gYou);
+    S.best = el('line', { 'class': 'best-line', visibility: 'hidden' }, gBest);
+    function put(node, l) {
+      node.setAttribute('x1', X(0)); node.setAttribute('y1', Y(l.b));
+      node.setAttribute('x2', X(10)); node.setAttribute('y2', Y(10 * l.m + l.b));
+    }
+    S.setYou = function (l) {
+      if (!l) { S.you.setAttribute('visibility', 'hidden'); return; }
+      put(S.you, l); S.you.setAttribute('visibility', 'visible');
+    };
+    S.setBest = function (l, draw) {
+      put(S.best, l);
+      S.best.setAttribute('visibility', 'visible');
+      S.best.classList.remove('draw');
+      if (draw) {
+        S.best.style.setProperty('--len', Math.hypot(X(10) - X(0), Y(10 * l.m + l.b) - Y(l.b)).toFixed(1));
+        void S.best.getBoundingClientRect();
+        S.best.classList.add('draw');
+      }
+    };
+    S.setGap = function (you, best) {
+      var poly = [[0, you.b], [10, 10 * you.m + you.b], [10, 10 * best.m + best.b], [0, best.b]]
+        .map(function (p) { return X(p[0]) + ',' + Y(p[1]); }).join(' ');
+      S.gGap.textContent = '';
+      el('polygon', { points: poly, 'class': 'gap' }, S.gGap);
+    };
+    S.setResid = function (pts, l, cls) {
+      S.gRes.textContent = '';
+      if (!l) return;
+      for (var j = 0; j < pts.length; j++) {
+        var yh = l.m * pts[j].x + l.b;
+        el('line', { x1: X(pts[j].x), y1: Y(pts[j].y), x2: X(pts[j].x), y2: Y(yh), 'class': 'res ' + cls }, S.gRes);
+      }
+    };
+    S.setCrowd = function (lines) {
+      S.gCrowd.textContent = '';
+      lines.forEach(function (l) {
+        el('line', { x1: X(0), y1: Y(l.b), x2: X(10), y2: Y(10 * l.m + l.b), 'class': 'crowd-line' }, S.gCrowd);
+      });
+    };
+    S.clearReveal = function () {
+      S.gGap.textContent = ''; S.gRes.textContent = ''; S.gCrowd.textContent = '';
+      S.best.setAttribute('visibility', 'hidden');
+      S.best.classList.remove('draw');
+    };
+
+    /* Each dot is one persistent square. On a new round it glides from its old spot to its new one
+       after its own random delay. Extra dots fade in, spare dots fade out. */
+    function dotTransform(p) { return 'translate(' + (X(p.x) - 4.5).toFixed(1) + 'px,' + (Y(p.y) - 4.5).toFixed(1) + 'px)'; }
+    S.setPoints = function (pts, animate, done) {
+      var go = animate && !reduceMotion(), dots = S.dots, j, n;
+      clearTimeout(S.timer);
+      for (j = 0; j < pts.length; j++) {
+        n = dots[j];
+        if (!n) {
+          n = el('rect', { width: 9, height: 9, 'class': 'dot' }, S.gPts);
+          n.style.transform = dotTransform(pts[j]);
+          if (go) n.style.opacity = '0';
+          dots[j] = n;
+        } else if (!go) {
+          n.classList.remove('fly');
+          n.style.transitionDelay = '0ms';
+          n.style.opacity = '';
+          n.style.transform = dotTransform(pts[j]);
+        }
+      }
+      if (!go) {
+        for (j = pts.length; j < dots.length; j++) if (dots[j].parentNode) dots[j].parentNode.removeChild(dots[j]);
+        dots.length = pts.length;
+        if (done) done();
+        return;
+      }
+      void svg.getBoundingClientRect();
+      for (j = 0; j < pts.length; j++) {
+        n = dots[j];
+        n.classList.add('fly');
+        n.style.transitionDelay = Math.round(Math.random() * 380) + 'ms';
+        n.style.opacity = '1';
+        n.style.transform = dotTransform(pts[j]);
+      }
+      dots.splice(pts.length).forEach(function (g) {
+        g.classList.add('fly');
+        g.style.transitionDelay = Math.round(Math.random() * 380) + 'ms';
+        g.style.opacity = '0';
+        setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 1300);
+      });
+      S.timer = setTimeout(function () { if (done) done(); }, 1200);
+    };
+    return S;
   }
 
-  /* ---------- svg scene ---------- */
-  var svg = document.getElementById('plot');
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-  var defs = el('defs', {}, svg);
-  var cp = el('clipPath', { id: 'plotclip' }, defs);
-  el('rect', { x: M.l, y: M.t, width: PW, height: PH }, cp);
-  var clip = { 'clip-path': 'url(#plotclip)' };
-  var gGrid = el('g', {}, svg);
-  var gGap = el('g', clip, svg);
-  var gRes = el('g', clip, svg);
-  var gPts = el('g', {}, svg);
-  var gBest = el('g', clip, svg);
-  var gYou = el('g', clip, svg);
-  var gHandles = el('g', {}, svg);
+  var main = Scene($('plot'));
+  var hostScene = Scene($('hostPlot'));
 
-  el('rect', { x: 0, y: 0, width: W, height: H, 'class': 'plotbg' }, gGrid);
-  for (var i = 0; i <= 10; i++) {
-    var cls = 'grid' + (i % 2 ? ' minor' : '');
-    el('line', { x1: X(i), y1: M.t, x2: X(i), y2: H - M.b, 'class': cls }, gGrid);
-    el('line', { x1: M.l, y1: Y(i), x2: W - M.r, y2: Y(i), 'class': cls }, gGrid);
+  /* ---------- practice backend ----------
+     Used when the class server is not available. It keeps a class in this browser's storage, so a
+     teacher tab and several student tabs on the same device can rehearse a full class. */
+  var practice = (function () {
+    var KEY = 'fitline-practice', listeners = [];
+    var uid = (function () {
+      try {
+        var u = sessionStorage.getItem('fitline-uid');
+        if (!u) { u = 'p' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('fitline-uid', u); }
+        return u;
+      } catch (e) { return 'p' + Math.random().toString(36).slice(2, 10); }
+    })();
+    function load() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } }
+    function save(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} fire(); }
+    function fire() { listeners.slice().forEach(function (f) { f(); }); }
+    window.addEventListener('storage', function (e) { if (e.key === KEY) fire(); });
+    function fail(msg) { var e = new Error(msg); e.fit = true; return e; }
+    function clone(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
+    function watch(read, cb) {
+      var last = null;
+      function f() { var s = JSON.stringify(read()); if (s !== last) { last = s; cb(JSON.parse(s === undefined ? 'null' : s)); } }
+      listeners.push(f);
+      setTimeout(f, 0);
+      return function () { var i = listeners.indexOf(f); if (i >= 0) listeners.splice(i, 1); };
+    }
+    return {
+      mode: 'practice',
+      signInAnonymous: function () { return Promise.resolve({ uid: uid }); },
+      signInTeacher: function () { return Promise.resolve({ uid: uid, email: 'practice' }); },
+      currentTeacher: function () { return Promise.resolve({ uid: uid, email: 'practice' }); },
+      createClass: function (code, data) {
+        var db = load();
+        if (db[code] && db[code].doc.hostUid !== uid) return Promise.reject(fail('exists'));
+        db[code] = { doc: data, players: {} }; save(db); return Promise.resolve();
+      },
+      getClass: function (code) { var c = load()[code]; return Promise.resolve(c ? clone(c.doc) : null); },
+      watchClass: function (code, cb) { return watch(function () { var c = load()[code]; return c ? c.doc : null; }, cb); },
+      updateClass: function (code, patch) {
+        var db = load(), c = db[code];
+        if (!c || c.doc.hostUid !== uid) return Promise.reject(fail('Not allowed'));
+        for (var k in patch) c.doc[k] = patch[k];
+        save(db); return Promise.resolve();
+      },
+      joinClass: function (code, id, name) {
+        var db = load(), c = db[code];
+        if (!c) return Promise.reject(fail('No class with that code.'));
+        if (!c.players[id]) c.players[id] = { name: name, joinedAt: Date.now(), lines: {} };
+        save(db); return Promise.resolve(clone(c.players[id]));
+      },
+      getPlayer: function (code, id) { var c = load()[code]; return Promise.resolve(c && c.players[id] ? clone(c.players[id]) : null); },
+      watchPlayers: function (code, cb) {
+        return watch(function () {
+          var c = load()[code]; if (!c) return [];
+          return Object.keys(c.players).map(function (k) { var p = clone(c.players[k]); p.uid = k; return p; });
+        }, cb);
+      },
+      lockLine: function (code, id, round, arr) {
+        var db = load(), c = db[code], p = c && c.players[id];
+        if (!p) return Promise.reject(fail('You were removed from this class.'));
+        if (c.doc.phase !== 'guess' || c.doc.round !== round) return Promise.reject(fail('That round is closed.'));
+        if (p.lines['r' + round]) return Promise.resolve();
+        p.lines['r' + round] = arr; save(db); return Promise.resolve();
+      },
+      kick: function (code, id) { var db = load(), c = db[code]; if (c && c.doc.hostUid === uid) { delete c.players[id]; save(db); } return Promise.resolve(); },
+      deleteClass: function (code) { var db = load(); if (db[code] && db[code].doc.hostUid === uid) { delete db[code]; save(db); } return Promise.resolve(); }
+    };
+  })();
+
+  var chosen = null;
+  /* The online backend (Firebase) registers itself as window.FitBackend. If it is missing or blocked, fall back to practice mode. */
+  function useBackend() {
+    if (chosen) return Promise.resolve(chosen);
+    return new Promise(function (res) {
+      function fin() { chosen = window.FitBackend || practice; res(chosen); }
+      if (window.FitBackend || window.fitBackendFailed) return fin();
+      window.addEventListener('fitbackend', fin, { once: true });
+      setTimeout(fin, 5000);
+    });
   }
-  el('rect', { x: M.l, y: M.t, width: PW, height: PH, 'class': 'frame' }, gGrid);
-  for (var t = 0; t <= 10; t += 2) {
-    el('text', { x: X(t), y: H - M.b + 26, 'text-anchor': 'middle', 'class': 'tick' }, gGrid).textContent = t;
-    el('text', { x: M.l - 12, y: Y(t) + 6, 'text-anchor': 'end', 'class': 'tick' }, gGrid).textContent = t;
+  function friendly(e) {
+    var c = (e && e.code) || '';
+    if (e && e.fit) return e.message;
+    if (c === 'permission-denied') return 'The class server refused that. Check the code, or ask your teacher.';
+    if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return 'Sign-in was cancelled.';
+    if (c === 'auth/popup-blocked') return 'The sign-in window was blocked. Allow pop-ups for this site and try again.';
+    if (c === 'auth/unauthorized-domain') return 'This site address is not authorized for sign-in yet. Add it under Authentication, Settings, Authorized domains.';
+    if (c === 'auth/operation-not-allowed') return 'That sign-in method is not turned on in the Firebase console yet.';
+    if (c.indexOf('auth/') === 0) return 'Sign-in failed (' + c + ').';
+    return 'Something went wrong. Check your connection and try again.';
   }
-  el('text', { x: M.l + PW / 2, y: H - 8, 'text-anchor': 'middle', 'class': 'axname' }, gGrid).textContent = 'x';
-  el('text', { x: 14, y: M.t + PH / 2, 'text-anchor': 'middle', 'class': 'axname', transform: 'rotate(-90 14 ' + (M.t + PH / 2) + ')' }, gGrid).textContent = 'y';
+  function say(id, msg) { var n = $(id); n.textContent = msg || ''; n.hidden = !msg; }
 
-  var youLine = el('line', { 'class': 'you-line' }, gYou);
-  var bestLine = el('line', { 'class': 'best-line', visibility: 'hidden' }, gBest);
-
-  function setLine(node, l) {
-    node.setAttribute('x1', X(0)); node.setAttribute('y1', Y(l.b));
-    node.setAttribute('x2', X(10)); node.setAttribute('y2', Y(10 * l.m + l.b));
-  }
-
-  /* ---------- state ---------- */
+  /* ---------- player screen (solo and student) ---------- */
+  var mode = 'solo';                 // 'solo' or 'class'
   var level = 'easy', round = 0, scores = [], pts = [], best = null, last = null;
-  var phase = 'place', drag = null, newRecord = false;
+  var phase = 'place';               // place, locked, revealed, wait, done
+  var drag = null, newRecord = false, animating = false;
   var hs = [{ x: 1.5, y: 5 }, { x: 8.5, y: 5 }];
   var handleNodes = [];
+  var cs = null;                     // class session for a student
+  var readout = $('readout');
+  var btnCheck = $('check'), btnNext = $('next'), residWrap = $('residWrap');
 
   function svgPoint(ev) {
-    var r = svg.getBoundingClientRect();
+    var r = main.svg.getBoundingClientRect();
     return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
   }
-
   function mkHandle(i, label) {
-    var g = el('g', { 'class': 'handle', tabindex: 0, role: 'slider', 'aria-label': label + ' handle. Arrow keys move it.', 'aria-valuemin': 0, 'aria-valuemax': 10 }, gHandles);
+    var g = el('g', { 'class': 'handle', tabindex: 0, role: 'slider', 'aria-label': label + ' handle. Arrow keys move it.', 'aria-valuemin': 0, 'aria-valuemax': 10 }, main.gHandles);
     el('rect', { x: -26, y: -26, width: 52, height: 52, fill: 'transparent' }, g);
     el('rect', { x: -15, y: -15, width: 30, height: 30, 'class': 'hring' }, g);
     el('rect', { x: -9, y: -9, width: 18, height: 18, 'class': 'hdot' }, g);
@@ -420,108 +749,39 @@
   }
   mkHandle(0, 'Left');
   mkHandle(1, 'Right');
-  svg.addEventListener('touchmove', function (e) { if (drag !== null) e.preventDefault(); }, { passive: false });
+  main.svg.addEventListener('touchmove', function (e) { if (drag !== null) e.preventDefault(); }, { passive: false });
 
   function moveHandle(i, x, y) {
     hs[i].x = clamp(x, i ? 5.5 : 0, i ? 10 : 4.5);
     hs[i].y = clamp(y, 0, 10);
     renderYou();
   }
+  function resetHandles() { hs = [{ x: 1.5, y: 5 }, { x: 8.5, y: 5 }]; }
+  function setAnimating(v) { animating = v; btnCheck.disabled = v; }
 
-  /* ---------- rendering ---------- */
-  var readout = document.getElementById('readout');
-
-  var dots = [], animating = false, animTimer = null;
-  function dotTransform(p) { return 'translate(' + (X(p.x) - 4.5).toFixed(1) + 'px,' + (Y(p.y) - 4.5).toFixed(1) + 'px)'; }
-  function reduceMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
-  function finishAnim() { animating = false; clearTimeout(animTimer); btnCheck.disabled = false; }
-
-  /* Each dot is one persistent square. On a new round it glides from its old
-     spot to its new one after its own random delay. Extra dots fade in, spare dots fade out. */
-  function renderPts(animate) {
-    var go = animate && !reduceMotion();
-    var i, n;
-    for (i = 0; i < pts.length; i++) {
-      n = dots[i];
-      if (!n) {
-        n = el('rect', { width: 9, height: 9, 'class': 'dot' }, gPts);
-        n.style.transform = dotTransform(pts[i]);
-        if (go) n.style.opacity = '0';
-        dots[i] = n;
-      } else if (!go) {
-        n.classList.remove('fly');
-        n.style.transitionDelay = '0ms';
-        n.style.opacity = '';
-        n.style.transform = dotTransform(pts[i]);
-      }
-    }
-    if (!go) {
-      for (i = pts.length; i < dots.length; i++) if (dots[i].parentNode) dots[i].parentNode.removeChild(dots[i]);
-      dots.length = pts.length;
-      finishAnim();
-      return;
-    }
-    void svg.getBoundingClientRect();
-    for (i = 0; i < pts.length; i++) {
-      n = dots[i];
-      n.classList.add('fly');
-      n.style.transitionDelay = Math.round(Math.random() * 380) + 'ms';
-      n.style.opacity = '1';
-      n.style.transform = dotTransform(pts[i]);
-    }
-    dots.splice(pts.length).forEach(function (g) {
-      g.classList.add('fly');
-      g.style.transitionDelay = Math.round(Math.random() * 380) + 'ms';
-      g.style.opacity = '0';
-      setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 1300);
-    });
-    animating = true;
-    btnCheck.disabled = true;
-    clearTimeout(animTimer);
-    animTimer = setTimeout(finishAnim, 1200);
-  }
-  function clearReveal() {
-    gGap.textContent = ''; gRes.textContent = '';
-    bestLine.setAttribute('visibility', 'hidden');
-    bestLine.classList.remove('draw');
-    document.getElementById('resid').value = 'none';
-  }
   function renderYou() {
+    var hide = phase === 'wait';
+    main.gHandles.style.visibility = hide ? 'hidden' : '';
     for (var i = 0; i < 2; i++) {
       handleNodes[i].setAttribute('transform', 'translate(' + X(hs[i].x) + ' ' + Y(hs[i].y) + ')');
       handleNodes[i].setAttribute('aria-valuenow', hs[i].y.toFixed(1));
       handleNodes[i].classList.toggle('locked', phase !== 'place');
     }
-    var l = lineFrom(hs[0], hs[1]);
-    setLine(youLine, l);
-    if (phase === 'place') renderReadout();
+    main.setYou(hide ? null : lineFrom(hs[0], hs[1]));
+    if (phase === 'place' && mode === 'solo') renderReadout();
   }
   function renderResid() {
-    gRes.textContent = '';
-    var which = document.getElementById('resid').value;
-    if (which === 'none' || !last) return;
-    var l = which === 'you' ? last.you : best;
-    for (var i = 0; i < pts.length; i++) {
-      var yh = l.m * pts[i].x + l.b;
-      el('line', { x1: X(pts[i].x), y1: Y(pts[i].y), x2: X(pts[i].x), y2: Y(yh), 'class': 'res ' + which }, gRes);
-    }
+    var which = $('resid').value;
+    if (which === 'none' || !last || !last.you) { main.setResid(pts, null, ''); return; }
+    main.setResid(pts, which === 'you' ? last.you : best, which);
   }
   function renderReveal() {
-    var y = last.you;
-    var poly = [[0, y.b], [10, 10 * y.m + y.b], [10, 10 * best.m + best.b], [0, best.b]]
-      .map(function (p) { return X(p[0]) + ',' + Y(p[1]); }).join(' ');
-    gGap.textContent = '';
-    el('polygon', { points: poly, 'class': 'gap' }, gGap);
-    setLine(bestLine, best);
-    var len = Math.hypot(X(10) - X(0), Y(10 * best.m + best.b) - Y(best.b));
-    bestLine.style.setProperty('--len', len.toFixed(1));
-    bestLine.setAttribute('visibility', 'visible');
-    bestLine.classList.remove('draw');
-    void bestLine.getBoundingClientRect();
-    bestLine.classList.add('draw');
+    if (last && last.you) main.setGap(last.you, best);
+    main.setBest(best, true);
     renderResid();
   }
 
+  /* solo readouts */
   function readoutPlace() {
     var l = lineFrom(hs[0], hs[1]);
     readout.innerHTML =
@@ -529,23 +789,32 @@
       '<p class="hint">Drag each handle, or focus one and use the arrow keys. A good fit has about as many dots above the line as below it.</p>' +
       '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(l) + '</code></div>';
   }
-  function readoutReveal() {
-    var d = last.you.m - best.m;
-    var slopeNote = Math.abs(d) < 0.005 ? 'Your slope matches the best fit.' :
-      'Your slope is ' + Math.abs(d).toFixed(2) + (d > 0 ? ' higher' : ' lower') + ' than the best fit.';
-    readout.innerHTML =
-      '<h2>Result</h2>' +
-      '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(last.you) + '</code></div>' +
-      '<div class="eq"><span class="sw best"></span><span class="name">Least-squares line</span><code>' + eq(best) + '</code></div>' +
-      '<div class="score"><strong>' + last.s + '</strong><span>' + verdict(last.s) + '</span></div>' +
-      '<dl class="stats">' +
-        '<dt>Avg gap between lines</dt><dd>' + last.g.toFixed(2) + ' units</dd>' +
-        '<dt>SSE, your line</dt><dd>' + last.sseY.toFixed(1) + '</dd>' +
-        '<dt>SSE, best-fit line</dt><dd>' + last.sseB.toFixed(1) + '</dd>' +
-        '<dt>Correlation r</dt><dd>' + best.r.toFixed(2) + '</dd>' +
-      '</dl>' +
-      '<p class="note">' + slopeNote + ' SSE is the sum of the squared vertical distances from the dots to a line. The least-squares line has the smallest SSE of any line. Use the residuals menu to see those distances.</p>';
+  function eqBlock(youLine) {
+    return (youLine ? '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(youLine) + '</code></div>' : '') +
+      '<div class="eq"><span class="sw best"></span><span class="name">Least-squares line</span><code>' + eq(best) + '</code></div>';
   }
+  function statsBlock() {
+    return '<dl class="stats">' +
+      '<dt>Avg gap between lines</dt><dd>' + last.g.toFixed(2) + ' units</dd>' +
+      '<dt>SSE, your line</dt><dd>' + last.sseY.toFixed(1) + '</dd>' +
+      '<dt>SSE, best-fit line</dt><dd>' + last.sseB.toFixed(1) + '</dd>' +
+      '<dt>Correlation r</dt><dd>' + best.r.toFixed(2) + '</dd>' +
+      '</dl>';
+  }
+  function slopeNote() {
+    var d = last.you.m - best.m;
+    return (Math.abs(d) < 0.005 ? 'Your slope matches the best fit.' :
+      'Your slope is ' + Math.abs(d).toFixed(2) + (d > 0 ? ' higher' : ' lower') + ' than the best fit.') +
+      ' SSE is the sum of the squared vertical distances from the dots to a line. The least-squares line has the smallest SSE of any line. Use the residuals menu to see those distances.';
+  }
+  function readoutReveal() {
+    readout.innerHTML =
+      '<h2>Result</h2>' + eqBlock(last.you) +
+      '<div class="score"><strong>' + last.s + '</strong><span>' + verdict(last.s) + '</span></div>' +
+      statsBlock() + '<p class="note">' + slopeNote() + '</p>';
+  }
+  function loadBest() { var b = store('fitline-best'); return b || {}; }
+  function saveBest(lv, v) { var b = loadBest(); if (!(b[lv] >= v)) { b[lv] = v; store('fitline-best', b); } }
   function readoutDone() {
     var total = scores.reduce(function (a, b) { return a + b; }, 0);
     var avg = Math.round(total / scores.length);
@@ -562,54 +831,105 @@
       '<div class="bars" role="img" aria-label="Scores by round: ' + scores.join(', ') + '">' + bars + '</div>' +
       '<div class="bars-labels">' + labels + '</div>' +
       '<dl class="stats">' +
-        '<dt>Total</dt><dd>' + total + ' / ' + (ROUNDS * 100) + '</dd>' +
+        '<dt>Total</dt><dd>' + total + ' / ' + (SOLO_ROUNDS * 100) + '</dd>' +
         '<dt>Best round</dt><dd>' + bestRound + '</dd>' +
         '<dt>Weakest round</dt><dd>' + worst + '</dd>' +
         '<dt>Your best average here</dt><dd>' + (pb != null ? pb : '--') + '</dd>' +
       '</dl>' +
       '<p class="note">Try a harder level. On Hard, a couple of stray dots pull the least-squares line toward them, so watch where it ends up.</p>';
   }
+
+  /* class readouts (student) */
+  function boardIndex(c) {
+    if (!c || !c.board) return -1;
+    var u = cs.uid.slice(0, 8);
+    for (var i = 0; i < c.board.length; i++) if (c.board[i].u === u) return i;
+    return -1;
+  }
+  function rankList(board, meId, n) {
+    var rows = board.slice(0, n), i, html = '<ol class="rank">';
+    for (i = 0; i < rows.length; i++) {
+      html += '<li class="' + (i === 0 ? 'r1 ' : '') + (rows[i].u === meId ? 'me' : '') + '"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(rows[i].n) + '</span><span class="rs">+' + rows[i].r + '</span><span class="tt">' + rows[i].t + '</span></li>';
+    }
+    return html + '</ol>';
+  }
+  function classReadout() {
+    var c = cs && cs.cls;
+    if (!c) { readout.innerHTML = '<h2>Connecting</h2><p class="hint">Reaching your class...</p>'; return; }
+    var who = '<p class="hint">Playing as <b>' + esc(cs.name) + '</b> in class ' + esc(cs.code) + '.</p>';
+    if (phase === 'wait') {
+      readout.innerHTML = '<h2>You are in!</h2>' + who + '<p class="hint">Waiting for your teacher to start the game.</p>';
+    } else if (phase === 'place') {
+      readout.innerHTML = '<h2>Round ' + c.round + '</h2>' +
+        '<p class="hint">Drag the handles, then press Lock in. You cannot change your line after that.</p>' +
+        '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(lineFrom(hs[0], hs[1])) + '</code></div>' + (cs.msg ? '<p class="err">' + esc(cs.msg) + '</p>' : '');
+    } else if (phase === 'locked') {
+      readout.innerHTML = '<h2>Locked in</h2>' + who +
+        '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(lineFrom(hs[0], hs[1])) + '</code></div>' +
+        '<p class="hint">Waiting for your teacher to reveal the answer.</p>';
+    } else if (phase === 'revealed') {
+      var idx = boardIndex(c), e = idx >= 0 ? c.board[idx] : null;
+      readout.innerHTML = '<h2>Round ' + c.round + ' result</h2>' +
+        (last && last.you ? eqBlock(last.you) : eqBlock(null) + '<p class="err">You did not lock in this round.</p>') +
+        '<div class="score"><strong>' + (e ? e.r : 0) + '</strong><span>' + verdict(e ? e.r : 0) + '</span></div>' +
+        '<dl class="stats"><dt>Your rank</dt><dd>' + (idx >= 0 ? '#' + (idx + 1) + ' of ' + c.board.length : '--') + '</dd><dt>Your total</dt><dd>' + (e ? e.t : 0) + '</dd></dl>' +
+        rankList(c.board || [], cs.uid.slice(0, 8), 5);
+    } else {
+      var i2 = boardIndex(c), e2 = i2 >= 0 ? c.board[i2] : null;
+      readout.innerHTML = '<h2>Game over</h2><div class="score"><strong>' + (i2 >= 0 ? '#' + (i2 + 1) : '--') + '</strong><span>of ' + ((c.board || []).length) + ' players</span></div>' +
+        '<dl class="stats"><dt>Your total</dt><dd>' + (e2 ? e2.t : 0) + ' / ' + (c.rounds * 100) + '</dd></dl>' + rankList(c.board || [], cs.uid.slice(0, 8), 5) +
+        '<p class="note">Thanks for playing. Use Leave to go back to the menu.</p>';
+    }
+  }
   function renderReadout() {
+    if (mode === 'class') return classReadout();
     if (phase === 'place') readoutPlace();
     else if (phase === 'revealed') readoutReveal();
     else readoutDone();
   }
 
-  function loadBest() { try { return JSON.parse(localStorage.getItem('fitline-best') || '{}'); } catch (e) { return {}; } }
-  function saveBest(lv, v) {
-    try { var b = loadBest(); if (!(b[lv] >= v)) { b[lv] = v; localStorage.setItem('fitline-best', JSON.stringify(b)); } } catch (e) {}
-  }
-
-  var btnCheck = document.getElementById('check');
-  var btnNext = document.getElementById('next');
-  var residWrap = document.getElementById('residWrap');
   function ui() {
-    document.getElementById('roundNo').textContent = pad(Math.min(round, ROUNDS), 2);
-    document.getElementById('roundMax').textContent = pad(ROUNDS, 2);
-    document.getElementById('total').textContent = pad(scores.reduce(function (a, b) { return a + b; }, 0), 4);
-    var pb = loadBest()[level];
-    document.getElementById('bestLevel').textContent = 'Hi ' + LEVELS[level].name + ' ' + (pb != null ? pb : '--');
+    var solo = mode === 'solo', c = cs && cs.cls;
+    if (solo) {
+      var pb = loadBest()[level];
+      $('roundNo').textContent = pad(Math.min(round, SOLO_ROUNDS), 2);
+      $('roundMax').textContent = pad(SOLO_ROUNDS, 2);
+      $('total').textContent = pad(scores.reduce(function (a, b) { return a + b; }, 0), 4);
+      $('bestLevel').textContent = 'Hi ' + LEVELS[level].name + ' ' + (pb != null ? pb : '--');
+      btnCheck.textContent = 'Check line';
+      btnNext.textContent = phase === 'done' ? 'Play again' : (round >= SOLO_ROUNDS ? 'See results' : 'Next round');
+    } else {
+      var i = boardIndex(c);
+      $('roundNo').textContent = pad(c ? c.round : 0, 2);
+      $('roundMax').textContent = pad(c ? c.rounds : 0, 2);
+      $('total').textContent = pad(i >= 0 ? c.board[i].t : 0, 4);
+      $('bestLevel').textContent = 'Class ' + (cs ? cs.code : '');
+      btnCheck.textContent = 'Lock in';
+    }
+    $('levels').hidden = !solo;
+    $('toMenu').textContent = solo ? 'Menu' : 'Leave';
     btnCheck.hidden = phase !== 'place';
-    btnNext.hidden = phase === 'place';
+    btnNext.hidden = !(solo && (phase === 'revealed' || phase === 'done'));
     residWrap.hidden = phase !== 'revealed';
-    btnNext.textContent = phase === 'done' ? 'Play again' : (round >= ROUNDS ? 'See results' : 'Next round');
     renderYou();
     renderReadout();
   }
 
-  /* ---------- flow ---------- */
+  /* solo flow */
   function newRound() {
     round++;
     pts = makeData(level);
     best = fit(pts);
     last = null;
-    hs = [{ x: 1.5, y: 5 }, { x: 8.5, y: 5 }];
+    resetHandles();
     phase = 'place';
-    clearReveal();
-    renderPts(dots.length > 0);
+    main.clearReveal();
+    $('resid').value = 'none';
+    setAnimating(true);
+    main.setPoints(pts, main.dots.length > 0, function () { setAnimating(false); });
     ui();
   }
-  function startGame() { round = 0; scores = []; newRecord = false; newRound(); }
+  function startGame() { mode = 'solo'; round = 0; scores = []; newRecord = false; cs = null; newRound(); }
   function check() {
     if (phase !== 'place' || animating) return;
     var you = lineFrom(hs[0], hs[1]);
@@ -623,7 +943,7 @@
   }
   function next() {
     if (phase === 'revealed') {
-      if (round >= ROUNDS) {
+      if (round >= SOLO_ROUNDS) {
         phase = 'done';
         var avg = Math.round(scores.reduce(function (a, b) { return a + b; }, 0) / scores.length);
         var prev = loadBest()[level];
@@ -634,26 +954,111 @@
     } else if (phase === 'done') startGame();
   }
 
-  btnCheck.addEventListener('click', check);
-  btnNext.addEventListener('click', next);
-  document.getElementById('resid').addEventListener('change', renderResid);
-  document.getElementById('levels').addEventListener('change', function (e) {
-    if (e.target && e.target.name === 'level') { level = e.target.value; startGame(); }
-  });
+  /* ---------- student: join and play in a class ---------- */
+  function lineToArr(l) { return [Math.round(hs[0].x * 1000) / 1000, Math.round(hs[0].y * 1000) / 1000, Math.round(hs[1].x * 1000) / 1000, Math.round(hs[1].y * 1000) / 1000]; }
+  function setHandlesFromArr(a) { hs = [{ x: a[0], y: a[1] }, { x: a[2], y: a[3] }]; }
 
-  /* ---------- title screen ---------- */
-  var VIEWS = { start: 'startView', cls: 'classView', game: 'gameView' };
+  function enterClass(code, uid, name, backend) {
+    leaveClass(true);
+    mode = 'class'; level = 'easy';
+    cs = { code: code, uid: uid, name: name, backend: backend, cls: null, round: -1, shown: '', myArr: null, msg: '' };
+    phase = 'wait'; last = null; pts = []; best = null;
+    main.clearReveal(); main.setPoints([], false); resetHandles();
+    showView('game');
+    ui();
+    cs.unwatch = backend.watchClass(code, onClassDoc, function () { if (cs) { cs.msg = 'Lost the connection to the class.'; ui(); } });
+  }
+  function leaveClass(keepSession) {
+    if (cs && cs.unwatch) cs.unwatch();
+    cs = null;
+    if (!keepSession) store('fitline-session', null);
+  }
+  function loadRound(c) {
+    var d = roundData(c.level, c.seed, c.round);
+    pts = d.pts; best = d.best; level = c.level;
+  }
+  function onClassDoc(c) {
+    if (!cs) return;
+    if (!c) { var gone = cs; leaveClass(); showView('start'); setNotice('Your teacher ended that class.'); return; }
+    cs.cls = c;
+    var key = c.phase + ':' + c.round;
+    if (c.phase === 'lobby') {
+      if (cs.shown !== key) { cs.shown = key; phase = 'wait'; main.clearReveal(); main.setPoints([], false); }
+    } else if (c.phase === 'guess') {
+      if (cs.shown !== key) {
+        var first = main.dots.length > 0;
+        cs.shown = key; cs.round = c.round; cs.myArr = null; cs.msg = '';
+        loadRound(c); resetHandles(); last = null; phase = 'place';
+        main.clearReveal(); $('resid').value = 'none';
+        setAnimating(true);
+        main.setPoints(pts, first, function () { setAnimating(false); });
+        var rr = c.round;
+        cs.backend.getPlayer(cs.code, cs.uid).then(function (p) {
+          if (!cs || cs.round !== rr || !p) return;
+          var a = p.lines && p.lines['r' + rr];
+          if (a && phase === 'place') { cs.myArr = a; setHandlesFromArr(a); phase = 'locked'; ui(); }
+        }).catch(function () {});
+      }
+    } else if (c.phase === 'reveal' || c.phase === 'done') {
+      if (cs.shown !== key) {
+        var wasLocked = cs.round === c.round && cs.myArr;
+        cs.shown = key;
+        if (cs.round !== c.round) { cs.round = c.round; loadRound(c); main.setPoints(pts, false); cs.myArr = null; }
+        phase = c.phase === 'done' ? 'done' : 'revealed';
+        var showIt = function (arr) {
+          if (!cs) return;
+          var l = lineFromArr(arr);
+          last = l ? { you: l, g: gapBetween(l, best), sseY: sse(pts, l), sseB: sse(pts, best) } : { you: null };
+          if (l) setHandlesFromArr(arr);
+          main.clearReveal();
+          if (l) main.setGap(l, best);
+          main.setBest(best, true);
+          ui();
+        };
+        if (cs.myArr) showIt(cs.myArr);
+        else {
+          var rr2 = c.round;
+          cs.backend.getPlayer(cs.code, cs.uid).then(function (p) {
+            if (!cs || cs.round !== rr2) return;
+            cs.myArr = (p && p.lines && p.lines['r' + rr2]) || null;
+            showIt(cs.myArr);
+          }).catch(function () { showIt(null); });
+        }
+        return;
+      }
+    }
+    ui();
+  }
+  function lockIn() {
+    if (phase !== 'place' || animating || !cs) return;
+    var arr = lineToArr(), rr = cs.round;
+    cs.myArr = arr; phase = 'locked'; cs.msg = '';
+    ui();
+    cs.backend.lockLine(cs.code, cs.uid, rr, arr).catch(function (e) {
+      if (!cs || cs.round !== rr) return;
+      if (phase === 'locked') { phase = 'place'; cs.myArr = null; }
+      cs.msg = friendly(e);
+      ui();
+    });
+  }
+
+  /* ---------- navigation ---------- */
+  var VIEWS = { start: 'startView', join: 'joinView', host: 'hostView', room: 'roomView', game: 'gameView' };
   function showView(name, focusId) {
-    for (var k in VIEWS) document.getElementById(VIEWS[k]).hidden = (k !== name);
+    for (var k in VIEWS) $(VIEWS[k]).hidden = (k !== name);
     window.scrollTo(0, 0);
-    if (name === 'start') drawHero();
-    var f = focusId && document.getElementById(focusId);
+    if (name === 'start') { drawHero(); refreshRejoin(); }
+    var f = focusId && $(focusId);
     if (f) f.focus({ preventScroll: true });
+  }
+  function setNotice(msg) { /* shown on the title screen under the tagline */
+    var n = document.querySelector('#startView .tagline');
+    if (n) n.textContent = msg || 'Drag the line. Beat the best fit.';
   }
 
   /* Small demo plot on the title screen: a fresh cloud each visit, the best-fit line, and a slightly-off guess. */
   function drawHero() {
-    var s = document.getElementById('heroPlot'), i;
+    var s = $('heroPlot'), i;
     s.textContent = '';
     var hp = makeData('medium'), hb = fit(hp), mx = 0, my = 0;
     for (i = 0; i < hp.length; i++) { mx += hp[i].x; my += hp[i].y; }
@@ -671,14 +1076,299 @@
     el('rect', { x: 10, y: 10, width: 300, height: 140, 'class': 'frame' }, s);
   }
 
-  document.getElementById('playSolo').addEventListener('click', function () { showView('game'); startGame(); });
-  document.getElementById('playClass').addEventListener('click', function () { showView('cls', 'classBack'); });
-  document.getElementById('classBack').addEventListener('click', function () { showView('start', 'playClass'); });
-  document.getElementById('toMenu').addEventListener('click', function () { showView('start', 'playSolo'); });
+  function refreshRejoin() {
+    var s = store('fitline-session'), b = $('rejoin');
+    b.hidden = !(s && s.code && s.name);
+    if (!b.hidden) $('rejoinText').textContent = 'Rejoin ' + s.code + ' as ' + s.name;
+  }
+
+  function banner(id, backend) {
+    var n = $(id);
+    n.hidden = backend.mode !== 'practice';
+    n.textContent = 'Practice mode. The class server could not be reached, so a class only works across tabs on this one device.';
+  }
+
+  /* join form */
+  $('joinClass').addEventListener('click', function () {
+    showView('join', 'joinCode'); say('joinMsg', '');
+    var s = store('fitline-session'); if (s && s.name) $('joinName').value = s.name;
+    useBackend().then(function (b) { banner('joinBanner', b); });
+  });
+  $('joinBack').addEventListener('click', function () { showView('start', 'joinClass'); });
+  $('joinCode').addEventListener('input', function () { this.value = this.value.toUpperCase().replace(/[^A-Z]/g, ''); });
+  $('joinForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var code = $('joinCode').value.trim().toUpperCase(), name = $('joinName').value.replace(/\s+/g, ' ').trim();
+    if (code.length !== 4) return say('joinMsg', 'The class code is 4 letters.');
+    if (!name) return say('joinMsg', 'Type your name so your teacher can see you.');
+    say('joinMsg', ''); $('joinGo').disabled = true;
+    var B;
+    useBackend().then(function (b) {
+      B = b;
+      return B.signInAnonymous();
+    }).then(function (u) {
+      return B.getClass(code).then(function (c) {
+        if (!c) { var e1 = new Error('No class with that code. Check the board and try again.'); e1.fit = true; throw e1; }
+        if (c.phase === 'done') { var e2 = new Error('That class has already finished.'); e2.fit = true; throw e2; }
+        return B.joinClass(code, u.uid, name);
+      }).then(function (p) {
+        store('fitline-session', { code: code, name: p.name });
+        enterClass(code, u.uid, p.name, B);
+      });
+    }).catch(function (err) { say('joinMsg', friendly(err)); }).then(function () { $('joinGo').disabled = false; });
+  });
+  $('rejoin').addEventListener('click', function () {
+    var s = store('fitline-session'); if (!s) return;
+    var B;
+    useBackend().then(function (b) { B = b; return B.signInAnonymous(); }).then(function (u) {
+      return B.getClass(s.code).then(function (c) {
+        if (!c || c.phase === 'done') { store('fitline-session', null); refreshRejoin(); setNotice('That class is over.'); return; }
+        return B.getPlayer(s.code, u.uid).then(function (p) {
+          if (!p) { store('fitline-session', null); refreshRejoin(); setNotice('You are no longer in that class.'); return; }
+          enterClass(s.code, u.uid, p.name, B);
+        });
+      });
+    }).catch(function (err) { setNotice(friendly(err)); });
+  });
+
+  /* ---------- teacher: sign in, create, run ---------- */
+  var HOST = null;   // { code, uid, backend, cls, players, cache, unwatchC, unwatchP, shown, busy }
+  var CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  function randomCode() { var s = ''; for (var i = 0; i < 4; i++) s += CODE_CHARS.charAt(Math.floor(Math.random() * CODE_CHARS.length)); return s; }
+  function randomSeed() { return Math.floor(Math.random() * 4294967296) >>> 0; }
+
+  $('hostClass').addEventListener('click', function () {
+    showView('host');
+    $('hostLogin').hidden = false; $('hostSetup').hidden = true; say('hostLoginMsg', '');
+    useBackend().then(function (b) {
+      banner('hostBanner', b);
+      return b.currentTeacher().then(function (u) { if (u) showSetup(b, u); else $('hostSignIn').focus({ preventScroll: true }); });
+    });
+  });
+  $('hostBack1').addEventListener('click', function () { showView('start', 'hostClass'); });
+  $('hostBack2').addEventListener('click', function () { showView('start', 'hostClass'); });
+  $('hostSignIn').addEventListener('click', function () {
+    say('hostLoginMsg', ''); $('hostSignIn').disabled = true;
+    useBackend().then(function (b) { return b.signInTeacher().then(function (u) { showSetup(b, u); }); })
+      .catch(function (e) { say('hostLoginMsg', friendly(e)); })
+      .then(function () { $('hostSignIn').disabled = false; });
+  });
+  function showSetup(b, u) {
+    $('hostLogin').hidden = true; $('hostSetup').hidden = false; say('hostSetupMsg', '');
+    var saved = store('fitline-host');
+    var rb = $('hostResume'); rb.hidden = true;
+    if (saved && saved.code) {
+      b.getClass(saved.code).then(function (c) {
+        if (c && c.hostUid === u.uid && c.phase !== 'done') { rb.hidden = false; rb.textContent = 'Resume ' + saved.code; rb.onclick = function () { enterRoom(b, u, saved.code); }; }
+        else if (!c) store('fitline-host', null);
+      }).catch(function () {});
+    }
+    $('hostCreate').onclick = function () { createClass(b, u); };
+  }
+  function createClass(b, u) {
+    var lv = document.querySelector('input[name="hlevel"]:checked').value, n = parseInt($('hostRounds').value, 10) || 10;
+    $('hostCreate').disabled = true; say('hostSetupMsg', '');
+    var tries = 0;
+    function attempt() {
+      var code = randomCode(), now = Date.now();
+      var doc = { hostUid: u.uid, level: lv, rounds: n, seed: randomSeed(), status: 'lobby', phase: 'lobby', round: 0, board: [], createdAt: now, expiresAt: now + 24 * 3600 * 1000 };
+      return b.createClass(code, doc).then(function () { return code; }, function (e) {
+        if (++tries < 6 && (e && (e.code === 'permission-denied' || e.message === 'exists'))) return attempt();
+        throw e;
+      });
+    }
+    attempt().then(function (code) { store('fitline-host', { code: code }); enterRoom(b, u, code); })
+      .catch(function (e) { say('hostSetupMsg', friendly(e)); })
+      .then(function () { $('hostCreate').disabled = false; });
+  }
+
+  function enterRoom(b, u, code) {
+    exitRoom();
+    HOST = { code: code, uid: u.uid, backend: b, cls: null, players: [], cache: {}, shown: '', busy: false, confirmEnd: false };
+    $('roomCode').textContent = code;
+    showView('room');
+    renderHost();
+    HOST.unwatchC = b.watchClass(code, function (c) {
+      if (!HOST) return;
+      if (!c) { exitRoom(); store('fitline-host', null); showView('start'); return; }
+      if (HOST.cls && HOST.cls.seed !== c.seed) HOST.cache = {};
+      HOST.cls = c; renderHost();
+    }, function () { say('roomMsg', 'Lost the connection to the class server.'); });
+    HOST.unwatchP = b.watchPlayers(code, function (list) { if (HOST) { HOST.players = list; renderHost(); } }, function () { say('roomMsg', 'Cannot read the player list.'); });
+  }
+  function exitRoom() {
+    if (HOST) { if (HOST.unwatchC) HOST.unwatchC(); if (HOST.unwatchP) HOST.unwatchP(); }
+    HOST = null;
+  }
+  function truthFor(r) {
+    var c = HOST.cls;
+    if (!HOST.cache[r]) HOST.cache[r] = roundData(c.level, c.seed, r);
+    return HOST.cache[r];
+  }
+  /* Names: trim duplicates by adding 2, 3, ... in join order. */
+  function uniqueNames(players) {
+    var order = players.slice().sort(function (a, b) { return (a.joinedAt - b.joinedAt) || (a.uid < b.uid ? -1 : 1); });
+    var seen = {}, out = {};
+    order.forEach(function (p) {
+      var base = p.name, k = base.toLowerCase(), n = (seen[k] = (seen[k] || 0) + 1);
+      out[p.uid] = n > 1 ? base + ' ' + n : base;
+    });
+    return out;
+  }
+  function standingsFor(upto) {
+    var c = HOST.cls, names = uniqueNames(HOST.players), rows = HOST.players.map(function (p) {
+      var rs = [], t = 0;
+      for (var r = 1; r <= upto; r++) { var s = scoreLine(p.lines && p.lines['r' + r], truthFor(r).best); rs.push(s); t += s; }
+      return { uid: p.uid, name: names[p.uid], total: t, rs: rs, last: upto > 0 ? rs[upto - 1] : 0, locked: !!(p.lines && p.lines['r' + c.round]) };
+    });
+    rows.sort(function (a, b) { return (b.total - a.total) || (a.name < b.name ? -1 : 1); });
+    return rows;
+  }
+  function revealedCount() { var c = HOST.cls; return c.phase === 'guess' ? c.round - 1 : c.round; }
+
+  function renderHost() {
+    if (!HOST) return;
+    var c = HOST.cls;
+    $('roomSub').textContent = c ? LEVELS[c.level].name + ', ' + c.rounds + ' rounds' : '';
+    $('roomLobby').hidden = !(c && c.phase === 'lobby');
+    $('roomRound').hidden = !(c && (c.phase === 'guess' || c.phase === 'reveal'));
+    $('roomDone').hidden = !(c && c.phase === 'done');
+    $('endClass').textContent = HOST.confirmEnd ? 'Really end and delete?' : 'End class';
+    if (!c) return;
+    if (c.phase === 'lobby') renderLobby();
+    else if (c.phase === 'done') renderDone();
+    else renderRound();
+  }
+  function renderLobby() {
+    $('bigCode').textContent = HOST.code;
+    var path = location.origin === 'null' || location.protocol === 'file:' ? 'this page' : location.host + location.pathname.replace(/index\.html$/, '');
+    $('joinUrl').textContent = path;
+    var names = uniqueNames(HOST.players), list = HOST.players.slice().sort(function (a, b) { return a.joinedAt - b.joinedAt; });
+    $('playerCount').textContent = '(' + list.length + ')';
+    $('chips').innerHTML = list.length ? list.map(function (p) {
+      return '<span class="chip">' + esc(names[p.uid]) + '<button class="x" type="button" data-uid="' + esc(p.uid) + '" aria-label="Remove ' + esc(names[p.uid]) + '">x</button></span>';
+    }).join('') : '<span class="hint">Waiting for students to join...</span>';
+    $('startGame').disabled = list.length === 0 || HOST.busy;
+  }
+  function renderRound() {
+    var c = HOST.cls, r = c.round, key = c.phase + ':' + r, d = truthFor(r), revealed = c.phase === 'reveal';
+    $('hRound').textContent = pad(r, 2); $('hRounds').textContent = pad(c.rounds, 2); $('hLevel').textContent = LEVELS[c.level].name;
+    var rows = standingsFor(revealedCount()), locked = rows.filter(function (x) { return x.locked; }).length, total = rows.length;
+    $('hLocked').textContent = 'Locked ' + locked + '/' + total;
+    if (HOST.shown !== key) {
+      var fresh = HOST.shown.indexOf('guess:') === 0 || HOST.shown.indexOf('reveal:') === 0;
+      var sameRound = HOST.shown.split(':')[1] === String(r);
+      HOST.shown = key;
+      if (!sameRound) { hostScene.clearReveal(); hostScene.setPoints(d.pts, fresh, null); }
+      if (revealed) {
+        var lines = HOST.players.map(function (p) { return lineFromArr(p.lines && p.lines['r' + r]); }).filter(Boolean);
+        hostScene.clearReveal(); hostScene.setCrowd(lines); hostScene.setBest(d.best, true);
+      } else { hostScene.clearReveal(); }
+    } else if (revealed) {
+      hostScene.setCrowd(HOST.players.map(function (p) { return lineFromArr(p.lines && p.lines['r' + r]); }).filter(Boolean));
+    }
+    $('hostReveal').hidden = revealed; $('hostNext').hidden = !revealed;
+    $('hostNext').textContent = r >= c.rounds ? 'Finish' : 'Next round';
+    $('hostReveal').disabled = HOST.busy; $('hostNext').disabled = HOST.busy;
+    var panel = $('hostPanel'), html, i;
+    if (!revealed) {
+      var meter = ''; for (i = 0; i < total; i++) meter += '<i class="' + (i < locked ? 'on' : '') + '"></i>';
+      html = '<h2>Locked in ' + locked + ' of ' + total + '</h2><div class="meter">' + meter + '</div><div class="chips">' +
+        rows.slice().sort(function (a, b) { return a.name < b.name ? -1 : 1; }).map(function (x) { return '<span class="chip' + (x.locked ? ' ok' : '') + '">' + esc(x.name) + '</span>'; }).join('') + '</div>';
+    } else {
+      var all = rows.map(function (x) { return x.last; }), avg = all.length ? Math.round(all.reduce(function (a, b) { return a + b; }, 0) / all.length) : 0;
+      var top = rows.slice().sort(function (a, b) { return b.last - a.last; })[0];
+      html = '<h2>Round ' + r + ' standings</h2><dl class="stats"><dt>Class average</dt><dd>' + avg + '</dd>' + (top ? '<dt>Closest this round</dt><dd>' + esc(top.name) + ' (' + top.last + ')</dd>' : '') +
+        '<dt>True line</dt><dd>' + eq(d.best) + '</dd></dl>' + hostRankList(rows, 8) +
+        '<p class="note">Cyan lines are the students\' lines. The pink line is the least-squares fit.</p>';
+    }
+    panel.innerHTML = html;
+  }
+  function hostRankList(rows, n) {
+    var html = '<ol class="rank">';
+    rows.slice(0, n).forEach(function (x, i) {
+      html += '<li class="' + (i === 0 ? 'r1' : '') + '"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(x.name) + '</span><span class="rs">+' + x.last + '</span><span class="tt">' + x.total + '</span></li>';
+    });
+    return html + '</ol>';
+  }
+  function renderDone() {
+    var rows = standingsFor(HOST.cls.round), top = rows.slice(0, 3), order = [1, 0, 2], html = '<div class="podium">';
+    order.forEach(function (i) {
+      if (!top[i]) return;
+      html += '<div class="p' + (i + 1) + '"><div class="pn">' + esc(top[i].name) + '</div><div class="ps">' + top[i].total + '</div><div class="blk">' + (i + 1) + '</div></div>';
+    });
+    html += '</div>';
+    var list = '<ol class="rank">';
+    rows.forEach(function (x, i) { list += '<li class="' + (i === 0 ? 'r1' : '') + '"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(x.name) + '</span><span class="rs">avg ' + (x.rs.length ? Math.round(x.total / x.rs.length) : 0) + '</span><span class="tt">' + x.total + '</span></li>'; });
+    $('doneBody').innerHTML = html + list + '</ol>';
+  }
+
+  function hostDo(patch) {
+    if (!HOST || HOST.busy) return Promise.resolve();
+    HOST.busy = true; say('roomMsg', ''); renderHost();
+    return HOST.backend.updateClass(HOST.code, patch).catch(function (e) { say('roomMsg', friendly(e)); }).then(function () { if (HOST) { HOST.busy = false; renderHost(); } });
+  }
+  $('startGame').addEventListener('click', function () { hostDo({ status: 'playing', phase: 'guess', round: 1 }); });
+  $('hostReveal').addEventListener('click', function () {
+    var c = HOST.cls, r = c.round, rows = standingsFor(r);
+    var board = rows.slice(0, 80).map(function (x) { return { u: x.uid.slice(0, 8), n: x.name, t: x.total, r: x.rs[r - 1] }; });
+    hostDo({ phase: 'reveal', board: board });
+  });
+  $('hostNext').addEventListener('click', function () {
+    var c = HOST.cls;
+    if (c.round >= c.rounds) hostDo({ phase: 'done', status: 'done' });
+    else hostDo({ phase: 'guess', round: c.round + 1 });
+  });
+  $('chips').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-uid]') : null;
+    if (b && HOST) HOST.backend.kick(HOST.code, b.getAttribute('data-uid')).catch(function (er) { say('roomMsg', friendly(er)); });
+  });
+  var endTimer = null;
+  $('endClass').addEventListener('click', function () {
+    if (!HOST) return;
+    if (!HOST.confirmEnd) {
+      HOST.confirmEnd = true; renderHost();
+      clearTimeout(endTimer); endTimer = setTimeout(function () { if (HOST) { HOST.confirmEnd = false; renderHost(); } }, 4000);
+      return;
+    }
+    var h = HOST;
+    h.backend.deleteClass(h.code).catch(function () {}).then(function () { exitRoom(); store('fitline-host', null); showView('start'); });
+  });
+  function csvCell(v) {
+    v = String(v);
+    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;      // stop spreadsheet formula injection from student names
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  $('csvBtn').addEventListener('click', function () {
+    if (!HOST || !HOST.cls) return;
+    var c = HOST.cls, rows = standingsFor(c.round), head = ['Name'], i;
+    for (i = 1; i <= c.rounds; i++) head.push('Round ' + i);
+    head.push('Total');
+    var lines = [head.map(csvCell).join(',')];
+    rows.forEach(function (x) { lines.push([x.name].concat(x.rs, [x.total]).map(csvCell).join(',')); });
+    try {
+      var blob = new Blob([lines.join('\n')], { type: 'text/csv' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'fit-the-line-' + HOST.code + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    } catch (e) { say('roomMsg', 'Downloads are not available here.'); }
+  });
+
+  /* ---------- wiring ---------- */
+  btnCheck.addEventListener('click', function () { if (mode === 'class') lockIn(); else check(); });
+  btnNext.addEventListener('click', next);
+  $('resid').addEventListener('change', renderResid);
+  $('levels').addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'level' && mode === 'solo') { level = e.target.value; startGame(); }
+  });
+  $('playSolo').addEventListener('click', function () { showView('game'); startGame(); });
+  $('toMenu').addEventListener('click', function () {
+    if (mode === 'class') { leaveClass(); showView('start', 'joinClass'); }
+    else showView('start', 'playSolo');
+  });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-    if (document.getElementById('startView').hidden) return;
-    var btns = Array.prototype.slice.call(document.querySelectorAll('#menu button'));
+    if ($('startView').hidden) return;
+    var btns = Array.prototype.slice.call(document.querySelectorAll('#menu button')).filter(function (b) { return !b.hidden; });
     var i = btns.indexOf(document.activeElement);
     var n = i < 0 ? 0 : (i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length;
     btns[n].focus();
@@ -688,5 +1378,12 @@
   showView('start');
 })();
 </script>
-</body>
-</html>
+<script type="module" src="firebase-backend.js" id="backendScript"></script>
+<script>
+  /* If the online backend cannot load (blocked, missing, or this is a preview), say so and let the page fall back to practice mode. */
+  (function () {
+    var t = document.getElementById('backendScript');
+    if (t) t.addEventListener('error', function () { window.fitBackendFailed = true; window.dispatchEvent(new Event('fitbackend')); });
+  })();
+</script>
+</body></html>

@@ -5,7 +5,8 @@ A classroom game for practicing regression by eye. Students drag two handles to 
 ## How it plays
 
 - 10 rounds per game, with a new random scatter plot each round (rising or falling trend).
-- Title screen with two modes: Play solo (the 10-round game) and Class game (placeholder for now; class mode with a code and live scoreboard is planned). Arrow keys and Enter work on the menu.
+- Title screen with three choices: Play solo, Join a class (students), and Launch a class game (teacher). Arrow keys and Enter work on the menu.
+- Class mode: the teacher signs in with Google, picks a difficulty and round count, and gets a 4-letter code for the board. Students enter the code and a name (no login). Everyone sees the same dots each round, the teacher reveals the answer, and a live scoreboard, final podium and CSV download follow.
 - Retro arcade look: pixel fonts, a CRT-style plot screen, and a HUD with round, total and hi-score. Fonts load from Google Fonts.
 - On Next Round, every dot glides to its new spot after its own short random delay. Check Line is held until they land, and reduced-motion settings skip the animation.
 - Three difficulty levels. Easy is the tightest scatter, Medium is looser, and Hard is the loosest and adds two stray points that pull the true line toward them.
@@ -14,6 +15,18 @@ A classroom game for practicing regression by eye. Students drag two handles to 
 - Handles work with mouse, touch, or the arrow keys (Shift for bigger steps).
 - Best average per difficulty is saved in the browser's localStorage.
 
+## Class mode setup (one time)
+
+Class mode uses Firebase (free Spark plan). The config is already in `firebase-backend.js`. In the Firebase console for the `trendlinegame` project:
+
+1. Build > Firestore Database: create the database (production mode).
+2. Build > Authentication > Sign-in method: enable **Anonymous** (students) and **Google** (teacher).
+3. Authentication > Settings > Authorized domains: add `hammillb.github.io`.
+4. In `firestore.rules`, replace `TEACHER_EMAIL_1` and `TEACHER_EMAIL_2` with the Google accounts allowed to launch classes, then paste the file into Firestore > Rules and Publish.
+5. Optional: Firestore > TTL, add a policy on field `expiresAt` for collection group `classes` so old classes clean up.
+
+If the class server cannot be reached, the page shows a "practice mode" banner and keeps classes in the browser's storage, so a teacher tab and student tabs on one device can rehearse.
+
 ## Running it
 
-It is a single static file with no build step and no dependencies other than Google Fonts. Open `index.html` in a browser, or serve the repo with GitHub Pages (Settings > Pages > deploy from the `main` branch, root folder).
+It is a static site with no build step. Solo play needs only `index.html`; class mode also loads `firebase-backend.js` and the Firebase SDK from gstatic. Open `index.html` in a browser, or serve the repo with GitHub Pages (Settings > Pages > deploy from the `main` branch, root folder).
