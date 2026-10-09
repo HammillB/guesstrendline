@@ -4,21 +4,6 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
 
-    // A browser becomes a teacher by writing teachers/{uid} with the shared passcode,
-    // which must equal config/main.pass (a document nobody can read, only the rules).
-    function isTeacher() {
-      return signedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
-    }
-
-    match /config/{any} { allow read, write: if false; }
-
-    match /teachers/{uid} {
-      allow get: if signedIn() && request.auth.uid == uid;
-      allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['pass'])
-        && request.resource.data.pass == get(/databases/$(database)/documents/config/main).data.pass;
-    }
-
     function classDoc(code) {
       return get(/databases/$(database)/documents/classes/$(code)).data;
     }
@@ -27,7 +12,7 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if false;
 
-      allow create: if isTeacher()
+      allow create: if signedIn()
         && code.matches('[A-Z]{4}')
         && request.resource.data.hostUid == request.auth.uid
         && request.resource.data.level in ['easy', 'medium', 'hard']

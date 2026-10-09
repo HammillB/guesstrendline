@@ -252,8 +252,8 @@
   <h2 id="hostTitle">Launch a class game</h2>
   <p class="banner" id="hostBanner" hidden></p>
   <div id="hostLogin">
-    <p class="hint">Enter the teacher passcode to create a class. Students do not need one. This browser remembers it.</p>
-    <div class="row"><input id="hostPass" type="password" autocomplete="off" placeholder="Teacher passcode" aria-label="Teacher passcode" style="font:inherit;padding:8px 10px;background:var(--screen);color:var(--ink);border:3px solid var(--grid)"><button id="hostSignIn" type="button">Unlock</button><button class="small" id="hostBack1" type="button">Back</button></div>
+    <p class="hint">Could not reach the class server.</p>
+    <div class="row"><button id="hostSignIn" type="button">Try again</button><button class="small" id="hostBack1" type="button">Back</button></div>
     <p class="err" id="hostLoginMsg" role="alert" hidden></p>
   </div>
   <div class="form" id="hostSetup" hidden>
@@ -1143,14 +1143,14 @@
     $('hostLogin').hidden = false; $('hostSetup').hidden = true; say('hostLoginMsg', '');
     useBackend().then(function (b) {
       banner('hostBanner', b);
-      return b.currentTeacher().then(function (u) { if (u) showSetup(b, u); else $('hostPass').focus({ preventScroll: true }); });
-    });
+      return b.currentTeacher().then(function (u) { if (u) showSetup(b, u); else $('hostSignIn').focus({ preventScroll: true }); });
+    }).catch(function (e) { say('hostLoginMsg', friendly(e)); });
   });
   $('hostBack1').addEventListener('click', function () { showView('start', 'hostClass'); });
   $('hostBack2').addEventListener('click', function () { showView('start', 'hostClass'); });
   $('hostSignIn').addEventListener('click', function () {
     say('hostLoginMsg', ''); $('hostSignIn').disabled = true;
-    useBackend().then(function (b) { return b.signInTeacher($('hostPass').value.trim()).then(function (u) { showSetup(b, u); }); })
+    useBackend().then(function (b) { return b.signInTeacher().then(function (u) { showSetup(b, u); }); })
       .catch(function (e) { say('hostLoginMsg', friendly(e)); })
       .then(function () { $('hostSignIn').disabled = false; });
   });

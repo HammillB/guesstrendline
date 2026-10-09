@@ -40,28 +40,9 @@ const api = {
     return { uid: u.uid };
   },
 
-  // Teachers unlock with a shared passcode. The passcode is checked by the security rules,
-  // which compare it to a document students cannot read (config/main).
-  async signInTeacher(pass) {
-    let u = await ready();
-    if (!u) u = (await signInAnonymously(auth)).user;
-    try {
-      await setDoc(doc(db, 'teachers', u.uid), { pass });
-    } catch (e) {
-      if (e && e.code === 'permission-denied') { const err = new Error('bad passcode'); err.teacherPass = true; throw err; }
-      throw e;
-    }
-    return { uid: u.uid };
-  },
-
-  async currentTeacher() {
-    const u = await ready();
-    if (!u) return null;
-    try {
-      const s = await getDoc(doc(db, 'teachers', u.uid));
-      return s.exists() ? { uid: u.uid } : null;
-    } catch (e) { return null; }
-  },
+  // Anyone can host a class: a teacher is just a signed-in (anonymous) browser.
+  async signInTeacher() { return api.signInAnonymous(); },
+  async currentTeacher() { return api.signInAnonymous(); },
 
   async createClass(code, data) {
     await setDoc(classRef(code), data);
