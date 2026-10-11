@@ -212,6 +212,24 @@
   .podium .p2 .blk { height: 110px; }
   .podium .p3 .blk { height: 80px; background: var(--magenta); }
 
+  /* Info screens: how to play, about, privacy, terms */
+  .sublinks { display: flex; flex-wrap: wrap; gap: 12px 14px; justify-content: center; }
+  .doc { max-width: 720px; margin: 4px auto; display: grid; gap: 22px; }
+  .doc h1 { margin: 0; }
+  .doc h2 { font: 400 0.85rem/1.5 var(--display); color: var(--cyan); text-transform: uppercase; margin: 0 0 12px; }
+  .doc h3 { font: 400 0.65rem/1.5 var(--display); color: var(--yellow); text-transform: uppercase; margin: 18px 0 8px; }
+  .doc p, .doc li { font-size: 1.5rem; line-height: 1.3; color: var(--ink); }
+  .doc p { margin: 0 0 14px; }
+  .doc ul, .doc ol { margin: 0 0 14px; padding-left: 1.3em; display: grid; gap: 8px; }
+  .doc .muted { color: var(--muted); }
+  .doc a { color: var(--cyan); }
+  .doc .steps { list-style: none; padding: 0; counter-reset: step; }
+  .doc .steps li { counter-increment: step; display: grid; grid-template-columns: 2.2em minmax(0, 1fr); gap: 10px; align-items: baseline; }
+  .doc .steps li::before { content: counter(step); font: 400 0.8rem var(--display); color: var(--dark); background: var(--yellow); text-align: center; padding: 6px 0; box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.28); }
+  .doc .toc { display: flex; flex-wrap: wrap; gap: 12px; }
+  .doc section.board { scroll-margin-top: 16px; }
+  .doc .formula { font: 1.7rem/1.2 var(--body); background: var(--screen); border: 3px solid var(--edge); padding: 8px 12px; overflow-wrap: anywhere; }
+
   @media (prefers-reduced-motion: reduce) {
     .best-line.draw { animation: none; stroke-dasharray: none; }
     .record, .prompt, .menu-btn .go { animation: none !important; }
@@ -233,7 +251,146 @@
     <button class="menu-btn third" id="hostClass" type="button"><span class="go"></span>Launch a class game<small>Teachers only. Start a class and get a code.</small></button>
     <button class="menu-btn alt" id="rejoin" type="button" hidden><span class="go"></span><span id="rejoinText">Rejoin class</span><small>You were playing in a class. Pick up where you left off.</small></button>
   </div>
+  <nav class="sublinks" aria-label="More">
+    <button class="small" id="openHow" type="button">How to play</button>
+    <button class="small" id="openAbout" type="button">About, privacy and terms</button>
+  </nav>
 </section>
+
+<!-- How to play -->
+<section class="doc" id="howView" hidden aria-labelledby="howTitle">
+  <h1 id="howTitle">How to play</h1>
+  <section class="board">
+    <h2>The idea</h2>
+    <p>You see a scatter plot. Place a straight line through the dots where you think the best fit is. Then the game shows the true least-squares regression line and scores how close you were.</p>
+  </section>
+  <section class="board">
+    <h2>Playing solo</h2>
+    <ol class="steps">
+      <li><span>Look at the dots. The line should run through the middle of the cloud, with about as many dots above it as below it.</span></li>
+      <li><span>Drag the two handles to move your line. With the keyboard, focus a handle and use the arrow keys (hold Shift for bigger steps).</span></li>
+      <li><span>Press <b>Check line</b>. The pink line is the true least-squares line, and the shaded area is the gap between it and yours.</span></li>
+      <li><span>Your score for the round is 0 to 100. Play 10 rounds for a total out of 1000. Your best average for each difficulty is saved on this device.</span></li>
+    </ol>
+    <h3>Difficulty</h3>
+    <ul>
+      <li><b>Easy</b> has tightly grouped dots.</li>
+      <li><b>Medium</b> is more spread out.</li>
+      <li><b>Hard</b> is the loosest and adds two stray points that pull the true line toward them.</li>
+    </ul>
+    <h3>After you check</h3>
+    <p>You see both equations, the sum of squared residuals (SSE) for each line, and the correlation r. The menu under the plot can draw the residuals, which are the vertical distances from each dot to a line, for your line or the best-fit line.</p>
+  </section>
+  <section class="board">
+    <h2>How scoring works</h2>
+    <p>The game measures the average vertical gap between your line and the least-squares line across the whole graph.</p>
+    <p class="formula">score = 100 x (1 - gap / 2), never below 0</p>
+    <p class="muted">A perfect match scores 100. An average gap of 2 units or more scores 0.</p>
+  </section>
+  <section class="board">
+    <h2>Playing in a class</h2>
+    <ol class="steps">
+      <li><span>Your teacher launches a class and puts a 4-letter code on the board.</span></li>
+      <li><span>On the title screen, press <b>Join a class</b>, type the code and your first name or a nickname, and press Join.</span></li>
+      <li><span>Wait for the teacher to start. Everyone plays the same dots in each round.</span></li>
+      <li><span>Drag your line, then press <b>Lock in</b>. You cannot change it after that.</span></li>
+      <li><span>When the teacher reveals the answer, you see your score and the class scoreboard. Closing the page by accident? Use <b>Rejoin</b> on the title screen.</span></li>
+    </ol>
+  </section>
+  <section class="board">
+    <h2>Teachers</h2>
+    <ol class="steps">
+      <li><span>Press <b>Launch a class game</b>, choose a difficulty and number of rounds, and press Create.</span></li>
+      <li><span>Show the code on the board. Student names appear as they join, and you can remove a name with the x.</span></li>
+      <li><span>Press <b>Start game</b>. When your students have locked in, press <b>Reveal</b>, talk through the result, then press <b>Next round</b>.</span></li>
+      <li><span>At the end you get a podium and a CSV download of the scores. <b>End class</b> deletes the class and everyone's names.</span></li>
+    </ol>
+  </section>
+  <div class="row"><button class="alt" id="howBack" type="button">Back</button></div>
+</section>
+
+<!-- About, privacy and terms -->
+<article class="doc" id="aboutView" hidden aria-labelledby="aboutTitle">
+  <h1 id="aboutTitle">About</h1>
+  <nav class="toc" aria-label="On this page">
+    <button class="small" type="button" data-jump="about">About</button>
+    <button class="small" type="button" data-jump="privacy">Privacy policy</button>
+    <button class="small" type="button" data-jump="terms">Terms of service</button>
+  </nav>
+
+  <section class="board" id="about">
+    <h2>About Fit the Line</h2>
+    <p>Fit the Line is a free classroom game for learning to judge a line of best fit by eye. It was made by Brock Hammill, a high school science teacher in Corvallis, Montana.</p>
+    <p>It is an independent project. It is not an official product of any school or school district.</p>
+    <p>Questions, problems, or requests to delete something: <a href="mailto:hammillbr@gmail.com">hammillbr@gmail.com</a>.</p>
+  </section>
+
+  <section class="board" id="privacy">
+    <h2>Privacy policy</h2>
+    <p class="muted">Effective October 11, 2026.</p>
+    <p>The short version: there are no accounts, no ads and no tracking. The game only keeps a name you type and your lines, and only for class games.</p>
+
+    <h3>What the game collects</h3>
+    <ul>
+      <li><b>Solo play:</b> nothing is sent anywhere. Your best scores are saved in your own browser.</li>
+      <li><b>Joining a class:</b> the class code, the name you type (up to 16 characters), the line you lock in each round, and the time you joined. The game also creates a random anonymous ID so it can tell players apart. It is not linked to your name, email or any account.</li>
+      <li><b>Launching a class:</b> the class settings (difficulty, number of rounds) and a random anonymous ID for the teacher's browser.</li>
+    </ul>
+    <p>The game does not ask for email addresses, passwords, ages, photos, locations or contact details. <b>Please use a first name or nickname, never a full name or anything private.</b> Your name is shown to your teacher and to the other people in your class on the scoreboard, and your teacher can download scores as a spreadsheet.</p>
+
+    <h3>What is stored in your browser</h3>
+    <p>The game saves a few things on your device: best scores, the class you are currently in (so Rejoin works), a teacher's most recent class code, and the anonymous sign-in. You can clear these any time by clearing this site's data in your browser settings.</p>
+
+    <h3>Services that help run the game</h3>
+    <ul>
+      <li><b>Google Firebase</b> stores class data and the anonymous sign-in. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a>.</li>
+      <li><b>Google Fonts</b> supplies the game's fonts, so your browser contacts Google when the page loads.</li>
+      <li><b>GitHub Pages</b> hosts the site. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub's privacy statement</a>.</li>
+      <li><b>Cloudflare</b> handles the fittheline.com address and passes traffic to the site. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare's privacy policy</a>.</li>
+    </ul>
+    <p>These providers can see technical information such as your IP address when your browser connects, as part of how the internet works. I do not sell your information, share it for advertising, or use analytics or advertising cookies.</p>
+
+    <h3>How long class data is kept</h3>
+    <p>When a teacher presses <b>End class</b>, the class and every player's name and lines are deleted. A class that is not ended is also set to expire about a day after it was created and is then removed automatically, which can take a little longer. Solo data never leaves your device.</p>
+
+    <h3>Students and schools</h3>
+    <p>This game is meant to be used in classrooms, including by students under 18. It collects only the name a student types. Teachers are responsible for following their school's and district's rules about students using online tools. If a student's personal information ended up in the game by mistake, email me and I will delete it.</p>
+
+    <h3>Security</h3>
+    <p>Connections to the site are encrypted. Only the browser that created a class can change or delete it, and students can only add their own line for the current round. No online service is perfectly secure, which is another reason to keep names simple.</p>
+
+    <h3>Changes and contact</h3>
+    <p>If this policy changes, the new version will be posted here with a new date. Contact: <a href="mailto:hammillbr@gmail.com">hammillbr@gmail.com</a>.</p>
+  </section>
+
+  <section class="board" id="terms">
+    <h2>Terms of service</h2>
+    <p class="muted">Effective October 11, 2026.</p>
+    <p>By using Fit the Line you agree to these terms. If you are a student, your teacher decides whether and how you use the game.</p>
+
+    <h3>Using the game</h3>
+    <ul>
+      <li>The game is free to use for learning and teaching.</li>
+      <li>Use a respectful name. Do not use offensive names, other people's names, or personal information as your name.</li>
+      <li>Do not try to break, overload, scrape or get around the game, read other people's data, or interfere with other people's classes.</li>
+      <li>Teachers can remove players from their class. I may remove names or classes that break these rules.</li>
+    </ul>
+
+    <h3>No guarantees</h3>
+    <p>The game is provided as is, without warranties of any kind. It is a practice tool, not a formal assessment, so please do not use it for grades. It may have mistakes, may be unavailable at times, and may change or stop at any time. Class data can be lost, for example if the service has a problem.</p>
+
+    <h3>Ownership</h3>
+    <p>The game and its design are by Brock Hammill. Copyright 2026 Brock Hammill. The project's source code is on GitHub, and any license for it is stated there.</p>
+
+    <h3>Limits on liability</h3>
+    <p>To the fullest extent the law allows, I am not responsible for any loss or damage that comes from using or not being able to use the game.</p>
+
+    <h3>Changes, law and contact</h3>
+    <p>I may update these terms and will post the new version here with a new date. Using the game after a change means you accept it. These terms are governed by the laws of the State of Montana. Contact: <a href="mailto:hammillbr@gmail.com">hammillbr@gmail.com</a>.</p>
+  </section>
+
+  <div class="row"><button class="alt" id="aboutBack" type="button">Back</button></div>
+</article>
 
 <!-- Student: join -->
 <section class="classview board" id="joinView" hidden aria-labelledby="joinTitle">
@@ -323,7 +480,6 @@
   <header class="top">
     <div>
       <h1>Fit the Line</h1>
-      <p class="lede">Drag the two handles so the line runs through the middle of the dots. Press Check Line to see the true least-squares line and how close you got.</p>
     </div>
     <div class="ctl">
       <fieldset class="seg" id="levels">
@@ -332,6 +488,7 @@
         <label><input type="radio" name="level" id="lv-medium" value="medium"><span>Medium</span></label>
         <label><input type="radio" name="level" id="lv-hard" value="hard"><span>Hard</span></label>
       </fieldset>
+      <button class="small" id="gameHow" type="button">How to play</button>
       <button class="small" id="toMenu" type="button">Menu</button>
     </div>
   </header>
@@ -787,7 +944,7 @@
     var l = lineFrom(hs[0], hs[1]);
     readout.innerHTML =
       '<h2>Place your line</h2>' +
-      '<p class="hint">Drag each handle, or focus one and use the arrow keys. A good fit has about as many dots above the line as below it.</p>' +
+      '<p class="hint">Drag the handles, then press Check line.</p>' +
       '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(l) + '</code></div>';
   }
   function eqBlock(youLine) {
@@ -862,7 +1019,7 @@
       readout.innerHTML = '<h2>You are in!</h2>' + who + '<p class="hint">Waiting for your teacher to start the game.</p>';
     } else if (phase === 'place') {
       readout.innerHTML = '<h2>Round ' + c.round + '</h2>' +
-        '<p class="hint">Drag the handles, then press Lock in. You cannot change your line after that.</p>' +
+        '<p class="hint">Drag the handles, then press Lock in. You cannot change it after that.</p>' +
         '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(lineFrom(hs[0], hs[1])) + '</code></div>' + (cs.msg ? '<p class="err">' + esc(cs.msg) + '</p>' : '');
     } else if (phase === 'locked') {
       readout.innerHTML = '<h2>Locked in</h2>' + who +
@@ -1044,7 +1201,8 @@
   }
 
   /* ---------- navigation ---------- */
-  var VIEWS = { start: 'startView', join: 'joinView', host: 'hostView', room: 'roomView', game: 'gameView' };
+  var VIEWS = { start: 'startView', join: 'joinView', host: 'hostView', room: 'roomView', game: 'gameView', how: 'howView', about: 'aboutView' };
+  var infoFrom = 'start';          // where Back goes from How to play and About
   function showView(name, focusId) {
     for (var k in VIEWS) $(VIEWS[k]).hidden = (k !== name);
     window.scrollTo(0, 0);
@@ -1354,6 +1512,28 @@
     } catch (e) { say('roomMsg', 'Downloads are not available here.'); }
   });
 
+  /* ---------- info screens ---------- */
+  function openInfo(name, section) {
+    var cur = null;
+    for (var k in VIEWS) if (!$(VIEWS[k]).hidden) cur = k;
+    infoFrom = (cur === 'game' || cur === 'start') ? cur : 'start';
+    showView(name);
+    if (section) jumpTo(section);
+  }
+  function jumpTo(id) {
+    var n = $(id);
+    if (n) n.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+  function closeInfo(focusId) { showView(infoFrom, infoFrom === 'start' ? focusId : null); }
+  $('openHow').addEventListener('click', function () { openInfo('how'); });
+  $('openAbout').addEventListener('click', function () { openInfo('about'); });
+  $('gameHow').addEventListener('click', function () { openInfo('how'); });
+  $('howBack').addEventListener('click', function () { closeInfo('openHow'); });
+  $('aboutBack').addEventListener('click', function () { closeInfo('openAbout'); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-jump]'), function (b) {
+    b.addEventListener('click', function () { jumpTo(b.getAttribute('data-jump')); });
+  });
+
   /* ---------- wiring ---------- */
   btnCheck.addEventListener('click', function () { if (mode === 'class') lockIn(); else check(); });
   btnNext.addEventListener('click', next);
@@ -1377,6 +1557,9 @@
   });
 
   showView('start');
+  var hash = (location.hash || '').replace('#', '');
+  if (hash === 'how') openInfo('how');
+  else if (hash === 'about' || hash === 'privacy' || hash === 'terms') { openInfo('about'); if (hash !== 'about') setTimeout(function () { jumpTo(hash); }, 50); }
 })();
 </script>
 <script type="module" src="firebase-backend.js" id="backendScript"></script>

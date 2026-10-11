@@ -33,7 +33,8 @@ service cloud.firestore {
         allow create: if signedIn()
           && request.auth.uid == uid
           && classDoc(code).phase != 'done'
-          && request.resource.data.keys().hasOnly(['name', 'joinedAt', 'lines'])
+          && request.resource.data.keys().hasOnly(['name', 'joinedAt', 'lines', 'expiresAt'])
+          && request.resource.data.expiresAt is timestamp
           && request.resource.data.name is string
           && request.resource.data.name.size() >= 1
           && request.resource.data.name.size() <= 16

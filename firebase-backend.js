@@ -6,7 +6,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import {
   initializeFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs,
-  onSnapshot
+  onSnapshot, Timestamp
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
 // These values are public by design. Security comes from firestore.rules, not from hiding them.
@@ -44,8 +44,9 @@ const api = {
   async signInTeacher() { return api.signInAnonymous(); },
   async currentTeacher() { return api.signInAnonymous(); },
 
+  // expiresAt is stored as a real timestamp so a Firestore TTL policy can clean up old classes.
   async createClass(code, data) {
-    await setDoc(classRef(code), data);
+    await setDoc(classRef(code), { ...data, expiresAt: Timestamp.fromMillis(data.expiresAt) });
   },
 
   async getClass(code) {
@@ -65,7 +66,8 @@ const api = {
     const ref = playerRef(code, uid);
     const s = await getDoc(ref);
     if (s.exists()) return s.data();
-    const p = { name, joinedAt: Date.now(), lines: {} };
+    const now = Date.now();
+    const p = { name, joinedAt: now, lines: {}, expiresAt: Timestamp.fromMillis(now + 24 * 3600 * 1000) };
     await setDoc(ref, p);
     return p;
   },
