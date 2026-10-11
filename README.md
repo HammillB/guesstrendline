@@ -1,5 +1,7 @@
 # Fit the Line
 
+Live at https://fittheline.com
+
 A classroom game for practicing regression by eye. Students drag two handles to place a trendline over a scatter plot, then press **Check** to reveal the least-squares regression line, the gap between the two lines, and a score.
 
 ## How it plays
