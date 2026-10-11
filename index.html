@@ -259,7 +259,7 @@
   <p class="banner" id="joinBanner" hidden></p>
   <form class="form" id="joinForm" autocomplete="off">
     <div class="field"><label for="joinCode">Class code</label><input type="text" id="joinCode" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
-    <div class="field"><label for="joinName">Your name</label><input type="text" id="joinName" maxlength="16" autocomplete="off" spellcheck="false"></div>
+    <div class="field"><label for="joinName">Your name</label><input type="text" id="joinName" maxlength="16" autocomplete="off" spellcheck="false"><p class="hint" style="margin:0">Leave this blank if your teacher turned on fun names.</p></div>
     <p class="err" id="joinMsg" role="alert" hidden></p>
     <div class="row"><button id="joinGo" type="submit">Join</button><button class="small" id="joinBack" type="button">Back</button></div>
   </form>
@@ -286,6 +286,14 @@
     <div class="field">
       <label for="hostRounds">Rounds</label>
       <select id="hostRounds"><option value="5">5</option><option value="10" selected>10</option><option value="15">15</option></select>
+    </div>
+    <div class="field">
+      <span class="lab" id="hostNamesLab">Fun names</span>
+      <fieldset class="seg" id="hostNames" aria-labelledby="hostNamesLab">
+        <label><input type="radio" name="hnames" id="hn-off" value="off" checked><span>Off</span></label>
+        <label><input type="radio" name="hnames" id="hn-on" value="on"><span>On</span></label>
+      </fieldset>
+      <p class="hint" style="margin:0">On: every student gets a random animal name like Sassy Squirrel, so no real names show on the board.</p>
     </div>
     <p class="err" id="hostSetupMsg" role="alert" hidden></p>
     <div class="row"><button id="hostCreate" type="button">Create class</button><button class="alt" id="hostResume" type="button" hidden>Resume class</button><button class="small" id="hostBack2" type="button">Back</button></div>
@@ -875,7 +883,7 @@
   function classReadout() {
     var c = cs && cs.cls;
     if (!c) { readout.innerHTML = '<h2>Connecting</h2><p class="hint">Reaching your class...</p>'; return; }
-    var who = '<p class="hint">Playing as <b>' + esc(cs.name) + '</b> in class ' + esc(cs.code) + '.</p>';
+    var who = '<p class="hint">' + (c.autoNames ? 'Your name is ' : 'Playing as ') + '<b>' + esc(cs.name) + '</b> in class ' + esc(cs.code) + '.</p>';
     if (phase === 'wait') {
       readout.innerHTML = '<h2>You are in!</h2>' + who + '<p class="hint">Waiting for your teacher to start the game.</p>';
     } else if (phase === 'place') {
@@ -1107,6 +1115,15 @@
     n.textContent = 'Practice mode. The class server could not be reached, so a class only works across tabs on this one device.';
   }
 
+  /* fun names: random Adjective Animal, at most 16 characters (the server limit) */
+  var NAME_ADJ = ['Sassy','Sneaky','Zippy','Fuzzy','Bouncy','Goofy','Grumpy','Jolly','Wacky','Speedy','Silly','Cheeky','Dizzy','Giddy','Peppy','Spicy','Sleepy','Snazzy','Brave','Clever','Mighty','Jazzy','Quirky','Funky','Plucky','Nifty','Zesty','Perky','Chilly','Daring','Lucky','Rowdy','Swift','Witty','Breezy','Chunky','Fluffy','Gentle','Hasty','Noble'];
+  var NAME_ANI = ['Squirrel','Otter','Penguin','Llama','Walrus','Badger','Hedgehog','Panda','Koala','Moose','Raccoon','Platypus','Narwhal','Gecko','Ferret','Beaver','Sloth','Lemur','Capybara','Meerkat','Alpaca','Wombat','Quokka','Puffin','Falcon','Dolphin','Turtle','Lobster','Yak','Bison','Toucan','Iguana','Pelican','Octopus','Giraffe','Cheetah','Possum','Tortoise','Chipmunk','Owl'];
+  function funName() {
+    var n;
+    do { n = NAME_ADJ[Math.floor(Math.random() * NAME_ADJ.length)] + ' ' + NAME_ANI[Math.floor(Math.random() * NAME_ANI.length)]; } while (n.length > 16);
+    return n;
+  }
+
   /* join form */
   $('joinClass').addEventListener('click', function () {
     showView('join', 'joinCode'); say('joinMsg', '');
@@ -1119,7 +1136,6 @@
     e.preventDefault();
     var code = $('joinCode').value.trim().toUpperCase(), name = $('joinName').value.replace(/\s+/g, ' ').trim();
     if (code.length !== 4) return say('joinMsg', 'The class code is 4 letters.');
-    if (!name) return say('joinMsg', 'Type your name so your teacher can see you.');
     say('joinMsg', ''); $('joinGo').disabled = true;
     var B;
     useBackend().then(function (b) {
@@ -1129,6 +1145,8 @@
       return B.getClass(code).then(function (c) {
         if (!c) { var e1 = new Error('No class with that code. Check the board and try again.'); e1.fit = true; throw e1; }
         if (c.phase === 'done') { var e2 = new Error('That class has already finished.'); e2.fit = true; throw e2; }
+        if (c.autoNames) name = funName();
+        else if (!name) { var e3 = new Error('Type your name so your teacher can see you.'); e3.fit = true; throw e3; }
         return B.joinClass(code, u.uid, name);
       }).then(function (p) {
         store('fitline-session', { code: code, name: p.name });
@@ -1190,7 +1208,7 @@
     var tries = 0;
     function attempt() {
       var code = randomCode(), now = Date.now();
-      var doc = { hostUid: u.uid, level: lv, rounds: n, seed: randomSeed(), status: 'lobby', phase: 'lobby', round: 0, board: [], createdAt: now, expiresAt: now + 24 * 3600 * 1000 };
+      var doc = { hostUid: u.uid, level: lv, rounds: n, seed: randomSeed(), status: 'lobby', phase: 'lobby', round: 0, board: [], createdAt: now, expiresAt: now + 24 * 3600 * 1000, autoNames: $('hn-on').checked };
       return b.createClass(code, doc).then(function () { return code; }, function (e) {
         if (++tries < 6 && (e && (e.code === 'permission-denied' || e.message === 'exists'))) return attempt();
         throw e;
@@ -1248,7 +1266,7 @@
   function renderHost() {
     if (!HOST) return;
     var c = HOST.cls;
-    $('roomSub').textContent = c ? LEVELS[c.level].name + ', ' + c.rounds + ' rounds' : '';
+    $('roomSub').textContent = c ? LEVELS[c.level].name + ', ' + c.rounds + ' rounds' + (c.autoNames ? ', fun names' : '') : '';
     $('roomLobby').hidden = !(c && c.phase === 'lobby');
     $('roomRound').hidden = !(c && (c.phase === 'guess' || c.phase === 'reveal'));
     $('roomDone').hidden = !(c && c.phase === 'done');
