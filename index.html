@@ -1399,6 +1399,8 @@
   var LEGACY = { how: 'how-to-play', about: 'about', privacy: 'privacy', terms: 'terms' };
   var hash = (location.hash || '').replace('#', '');
   if (LEGACY[hash]) location.replace('/' + LEGACY[hash] + '/');
+  else if (hash === 'host') $('hostClass').click();      /* /#host and /#join are deep links from the teacher and how-to pages */
+  else if (hash === 'join') $('joinClass').click();
   window.addEventListener('hashchange', function () { var h = (location.hash || '').replace('#', ''); if (LEGACY[h]) location.replace('/' + LEGACY[h] + '/'); });
 })();
 </script>
