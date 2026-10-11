@@ -9,7 +9,7 @@ A classroom game for practicing regression by eye. Students drag two handles to 
 - 10 rounds per game, with a new random scatter plot each round (rising or falling trend).
 - Title screen with three choices: Play solo, Join a class (students), and Launch a class game (teacher). Arrow keys and Enter work on the menu.
 - Class mode: anyone can launch a class (no login), pick a difficulty and round count, and gets a 4-letter code for the board. Students enter the code and a name (no login). Everyone sees the same dots each round, the teacher reveals the answer, and a live scoreboard, final podium and CSV download follow.
-- How to play and About screens: instructions live on their own screen, reachable from the title screen and from the game. The About page holds the privacy policy and terms of service. Deep links: `/#how`, `/#about`, `/#privacy`, `/#terms`.
+- Real pages for search engines and sharing: `/how-to-play/`, `/teachers/`, `/about/`, `/privacy/`, `/terms/`, all styled by `site.css` and listed in `sitemap.xml`. The old `/#how`, `/#about`, `/#privacy` and `/#terms` links redirect to them. The home page carries JSON-LD (WebApplication) structured data.
 - Retro arcade look: pixel fonts, a CRT-style plot screen, and a HUD with round, total and hi-score. Fonts load from Google Fonts.
 - On Next Round, every dot glides to its new spot after its own short random delay. Check Line is held until they land, and reduced-motion settings skip the animation.
 - Three difficulty levels. Easy is the tightest scatter, Medium is looser, and Hard is the loosest and adds two stray points that pull the true line toward them.

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to Play Fit the Line - Line of Best Fit Game for Students</title>
+<meta name="description" content="Learn how to play Fit the Line, a free scatter plot game. Place a trendline by eye, then compare it to the true least-squares regression line. Solo and live class modes explained.">
+<link rel="canonical" href="https://fittheline.com/how-to-play/">
+<meta property="og:title" content="How to Play Fit the Line - Line of Best Fit Game for Students">
+<meta property="og:description" content="Learn how to play Fit the Line, a free scatter plot game. Place a trendline by eye, then compare it to the true least-squares regression line. Solo and live class modes explained.">
+<meta property="og:url" content="https://fittheline.com/how-to-play/">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0b0a1e">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<div class="page">
+<header class="sitehead">
+  <a class="brand" href="/">Fit the Line</a>
+  <nav aria-label="Main"><a href="/">Play</a><a href="/how-to-play/" aria-current="page">How to play</a><a href="/teachers/">For teachers</a><a href="/about/">About</a></nav>
+</header>
+<main class="doc">
+<h1>How to play Fit the Line</h1>
+
+<p class="lead">Fit the Line is a free game that trains your eye for the line of best fit. You place a trendline over a scatter plot, then the game shows the true least-squares regression line and scores how close you were.</p>
+<section class="board">
+  <h2>What is a line of best fit?</h2>
+  <p>A scatter plot shows pairs of numbers as dots. When the dots rise or fall in a rough pattern, a straight line can describe the trend. The least-squares regression line is the line that makes the total of the squared vertical distances from the dots to the line as small as possible. Those distances are called residuals.</p>
+  <p>In Fit the Line you try to draw that line by eye. The closer you get, the higher your score.</p>
+</section>
+<section class="board">
+  <h2>Playing solo</h2>
+  <ol class="steps">
+    <li><span>Look at the dots. The line should run through the middle of the cloud, with about as many dots above it as below it.</span></li>
+    <li><span>Drag the two handles to move your line. With a keyboard, focus a handle and use the arrow keys (hold Shift for bigger steps).</span></li>
+    <li><span>Press <b>Check line</b>. The pink line is the true least-squares line, and the shaded area is the gap between it and yours.</span></li>
+    <li><span>Your score for the round is 0 to 100. Play 10 rounds for a total out of 1000. Your best average for each difficulty is saved on your device.</span></li>
+  </ol>
+  <h3>Difficulty</h3>
+  <ul>
+    <li><b>Easy</b> has tightly grouped dots.</li>
+    <li><b>Medium</b> is more spread out.</li>
+    <li><b>Hard</b> is the loosest and adds two stray points that pull the true line toward them.</li>
+  </ul>
+  <h3>After you check</h3>
+  <p>You see both equations, the sum of squared residuals (SSE) for each line, and the correlation coefficient r. A menu under the plot can draw the residuals for your line or for the best-fit line.</p>
+</section>
+<section class="board">
+  <h2>Tips for a better line</h2>
+  <ul>
+    <li>The least-squares line always passes through the middle point of the data, the point made from the average x and the average y. Aim your line through the center of the cloud first, then tilt it.</li>
+    <li>Check the direction first. If the dots rise from left to right, the slope is positive. If they fall, it is negative.</li>
+    <li>On Hard, watch the stray points. A point far from the others can pull the true line toward it more than a point near the middle.</li>
+    <li>Use the residuals menu after each round to see which dots made your line miss.</li>
+  </ul>
+</section>
+<section class="board">
+  <h2>How scoring works</h2>
+  <p>The game measures the average vertical gap between your line and the least-squares line across the whole graph.</p>
+  <p class="formula">score = 100 x (1 - gap / 2), never below 0</p>
+  <p class="muted">A perfect match scores 100. An average gap of 2 units or more scores 0.</p>
+</section>
+<section class="board">
+  <h2>Playing in a class</h2>
+  <ol class="steps">
+    <li><span>Your teacher launches a class game and puts a 4-letter code on the board.</span></li>
+    <li><span>On the <a href="/">Fit the Line home page</a>, press <b>Join a class</b>, type the code and your first name or a nickname, and press Join.</span></li>
+    <li><span>Wait for the teacher to start. Everyone plays the same dots in each round.</span></li>
+    <li><span>Drag your line, then press <b>Lock in</b>. You cannot change it after that.</span></li>
+    <li><span>When the teacher reveals the answer, you see your score and the class scoreboard. If you close the page by accident, use <b>Rejoin</b> on the home page.</span></li>
+  </ol>
+  <p>Teachers: see the <a href="/teachers/">guide for teachers</a> for how to run a class game.</p>
+</section>
+<div class="ctas"><a class="cta" href="/">Play now</a><a class="cta alt" href="/teachers/">For teachers</a></div>
+
+</main>
+<footer class="sitefoot">
+  <nav aria-label="Legal and contact"><a href="/privacy/">Privacy policy</a><a href="/terms/">Terms of service</a><a href="mailto:info@fittheline.com">info@fittheline.com</a></nav>
+  <p>Fit the Line is a free classroom game by Brock Hammill. It is not an official product of any school or school district.</p>
+</footer>
+</div>
+</body>
+</html>

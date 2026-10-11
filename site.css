@@ -1,0 +1,57 @@
+/* Shared styles for the info pages (how to play, teachers, about, privacy, terms). The game itself is in index.html. */
+:root {
+  --bg: #0b0a1e; --screen: #070615; --panel: #14123a; --ink: #ece9ff; --muted: #a8a5e0;
+  --grid: #2b2868; --edge: #6c5ff0; --cyan: #2ee6ff; --magenta: #ff3d9a; --yellow: #ffd23f; --dark: #0b0a1e;
+  --display: "Press Start 2P", "Courier New", monospace;
+  --body: "VT323", "Courier New", monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 20px 30px, #ffffff 0, #ffffff 1px, transparent 1.6px),
+    radial-gradient(circle at 90px 120px, #9fe9ff 0, #9fe9ff 1px, transparent 1.6px),
+    radial-gradient(circle at 150px 60px, #ff9cc8 0, #ff9cc8 1.5px, transparent 2px);
+  background-size: 190px 170px, 240px 220px, 330px 290px;
+  color: var(--ink); font: 22px/1.2 var(--body); padding: 28px 20px 44px;
+}
+.page { max-width: 760px; margin-inline: auto; display: grid; gap: 28px; }
+a { color: var(--cyan); }
+a:focus-visible { outline: 3px dashed var(--ink); outline-offset: 4px; }
+
+.sitehead { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; justify-content: space-between; }
+.brand { font: 400 1.1rem/1.3 var(--display); color: var(--yellow); text-shadow: 3px 3px 0 var(--magenta); text-transform: uppercase; text-decoration: none; }
+.sitehead nav, .sitefoot nav { display: flex; flex-wrap: wrap; gap: 10px 12px; }
+.sitehead nav a, .sitefoot nav a {
+  font: 400 0.6rem/1 var(--display); text-transform: uppercase; text-decoration: none; color: var(--muted);
+  background: var(--screen); border: 3px solid var(--edge); padding: 11px 12px;
+}
+.sitehead nav a:hover, .sitefoot nav a:hover { color: var(--ink); }
+.sitehead nav a[aria-current="page"] { background: var(--cyan); border-color: var(--cyan); color: var(--dark); }
+.sitefoot { display: grid; gap: 16px; border-top: 3px dashed var(--edge); padding-top: 22px; }
+.sitefoot p { margin: 0; color: var(--muted); font-size: 1.3rem; }
+
+.doc { display: grid; gap: 22px; min-width: 0; }
+.doc h1 { font: 400 clamp(1.2rem, 5vw, 2rem)/1.4 var(--display); color: var(--yellow); text-shadow: 4px 4px 0 var(--magenta); margin: 0; text-transform: uppercase; text-wrap: balance; }
+.board { background: var(--panel); padding: 16px 18px; margin: 4px; min-width: 0;
+  box-shadow: 0 -4px 0 0 var(--edge), 0 4px 0 0 var(--edge), -4px 0 0 0 var(--edge), 4px 0 0 0 var(--edge); }
+.doc h2 { font: 400 0.85rem/1.5 var(--display); color: var(--cyan); text-transform: uppercase; margin: 0 0 12px; }
+.doc h3 { font: 400 0.65rem/1.5 var(--display); color: var(--yellow); text-transform: uppercase; margin: 18px 0 8px; }
+.doc p, .doc li, .doc dd { font-size: 1.5rem; line-height: 1.3; color: var(--ink); }
+.doc p { margin: 0 0 14px; }
+.doc .lead { font-size: 1.7rem; color: var(--muted); margin: 0; }
+.doc .muted { color: var(--muted); }
+.doc ul, .doc ol { margin: 0 0 14px; padding-left: 1.3em; display: grid; gap: 8px; }
+.doc dt { font: 400 0.65rem/1.5 var(--display); color: var(--yellow); text-transform: uppercase; margin: 16px 0 6px; }
+.doc dd { margin: 0 0 8px; }
+.doc .steps { list-style: none; padding: 0; counter-reset: step; }
+.doc .steps li { counter-increment: step; display: grid; grid-template-columns: 2.2em minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.doc .steps li::before { content: counter(step); font: 400 0.8rem var(--display); color: var(--dark); background: var(--yellow); text-align: center; padding: 6px 0; box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.28); }
+.doc .formula { font: 1.7rem/1.2 var(--body); background: var(--screen); border: 3px solid var(--edge); padding: 8px 12px; overflow-wrap: anywhere; }
+.cta { display: inline-block; font: 400 0.8rem/1 var(--display); text-transform: uppercase; text-decoration: none; color: var(--dark); background: var(--yellow); padding: 18px 22px;
+  box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 5px 0 0 #7a5d00; }
+.cta:active { transform: translateY(4px); }
+.cta.alt { background: var(--cyan); box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.28), inset 4px 4px 0 rgba(255, 255, 255, 0.4), 0 5px 0 0 #006b7a; }
+.ctas { display: flex; flex-wrap: wrap; gap: 18px 22px; padding: 4px 4px 8px; }
+@media (max-width: 520px) { .sitehead nav a, .sitefoot nav a { padding: 10px; } }
