@@ -26,7 +26,7 @@ Class mode uses Firebase (free Spark plan). The config is already in `firebase-b
 2. Build > Authentication > Sign-in method: enable **Anonymous** (students and teachers).
 3. Paste `firestore.rules` into Firestore > Rules and Publish.
 4. Firestore > TTL: add two policies on the field `expiresAt`, one for collection group `classes` and one for collection group `players`. The privacy policy says unfinished classes are removed automatically after about a day, and this is what makes that true.
-5. Update the contact email in the About page if it changes (search `hammillbr@gmail.com` in `index.html`).
+5. Update the contact email in the About page if it changes (search `info@fittheline.com` in `index.html`).
 
 If the class server cannot be reached, the page shows a "practice mode" banner and keeps classes in the browser's storage, so a teacher tab and student tabs on one device can rehearse.
 
