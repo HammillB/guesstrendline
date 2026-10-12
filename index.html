@@ -214,6 +214,11 @@
 
   /* Info screens: how to play, about, privacy, terms */
   .sublinks { display: flex; flex-wrap: wrap; gap: 12px 14px; justify-content: center; }
+  .side { display: grid; gap: 28px; align-content: start; min-width: 0; }
+  .namebox { padding-block: 16px; }
+  .namebox .hint { margin: 0 0 8px; }
+  .namebox .myname { margin-bottom: 8px; }
+  .namebox .code { margin: 0; font: 400 0.7rem/1.4 var(--display); color: var(--muted); text-transform: uppercase; }
   .myname { margin: 0 0 14px; font: 400 clamp(1.3rem, 6.4vw, 2rem)/1.4 var(--display); color: var(--yellow); text-shadow: 3px 3px 0 var(--magenta); overflow-wrap: anywhere; }
   a.small { display: inline-block; text-decoration: none; font-family: var(--display); line-height: 1.4; }
   a.small:hover, a.small:focus-visible { color: var(--cyan); border-color: var(--cyan); }
@@ -408,7 +413,10 @@
       </div>
     </section>
 
-    <section class="readout" id="readout" aria-live="polite"></section>
+    <div class="side">
+      <section class="readout namebox" id="nameBox" aria-label="Your name" hidden></section>
+      <section class="readout" id="readout" aria-live="polite"></section>
+    </div>
   </div>
 </div>
 </main>
@@ -902,18 +910,16 @@
   }
   function classReadout() {
     var c = cs && cs.cls;
+    fillNameBox();
     if (!c) { readout.innerHTML = '<h2>Connecting</h2><p class="hint">Reaching your class...</p>'; return; }
-    var who = c.autoNames
-      ? '<p class="hint" style="margin-bottom:6px">Your name is</p><p class="myname">' + esc(cs.name) + '</p><p class="hint">Class ' + esc(cs.code) + '</p>'
-      : '<p class="hint">Playing as <b>' + esc(cs.name) + '</b> in class ' + esc(cs.code) + '.</p>';
     if (phase === 'wait') {
-      readout.innerHTML = '<h2>You are in!</h2>' + who + '<p class="hint">Waiting for your teacher to start the game.</p>';
+      readout.innerHTML = '<h2>You are in!</h2><p class="hint">Waiting for your teacher to start the game.</p>';
     } else if (phase === 'place') {
       readout.innerHTML = '<h2>Round ' + rn(c) + '</h2>' +
         '<p class="hint">Drag the handles, then press Lock in. You cannot change it after that.</p>' +
         '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(lineFrom(hs[0], hs[1])) + '</code></div>' + (cs.msg ? '<p class="err">' + esc(cs.msg) + '</p>' : '');
     } else if (phase === 'locked') {
-      readout.innerHTML = '<h2>Locked in</h2>' + who +
+      readout.innerHTML = '<h2>Locked in</h2>' +
         '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(lineFrom(hs[0], hs[1])) + '</code></div>' +
         '<p class="hint">Waiting for your teacher to reveal the answer.</p>';
     } else if (phase === 'revealed') {
@@ -930,7 +936,18 @@
         '<p class="note">Thanks for playing. Your teacher may start another game, or use Leave to go back to the menu.</p>';
     }
   }
+  /* The name box never changes during a game: it always shows who you are, in the same place. */
+  function fillNameBox() {
+    var nb = $('nameBox'), show = mode === 'class' && !!cs;
+    nb.hidden = !show;
+    if (!show) { nb.removeAttribute('data-k'); return; }
+    var k = cs.name + '|' + cs.code;
+    if (nb.getAttribute('data-k') === k) return;
+    nb.setAttribute('data-k', k);
+    nb.innerHTML = '<p class="hint">Playing as</p><p class="myname">' + esc(cs.name) + '</p><p class="code">Class ' + esc(cs.code) + '</p>';
+  }
   function renderReadout() {
+    fillNameBox();
     if (mode === 'class') return classReadout();
     if (phase === 'place') readoutPlace();
     else if (phase === 'revealed') readoutReveal();
