@@ -217,7 +217,7 @@
   .side { display: grid; gap: 28px; align-content: start; min-width: 0; }
   .namebox { padding-block: 16px; }
   .namebox .hint { margin: 0 0 8px; }
-  .namebox .myname { margin-bottom: 8px; }
+  .namebox .myname { margin-bottom: 0; }
   .namebox .code { margin: 0; font: 400 0.7rem/1.4 var(--display); color: var(--muted); text-transform: uppercase; }
   .myname { margin: 0 0 14px; font: 400 clamp(1.3rem, 6.4vw, 2rem)/1.4 var(--display); color: var(--yellow); text-shadow: 3px 3px 0 var(--magenta); overflow-wrap: anywhere; }
   a.small { display: inline-block; text-decoration: none; font-family: var(--display); line-height: 1.4; }
@@ -944,7 +944,7 @@
     var k = cs.name + '|' + cs.code;
     if (nb.getAttribute('data-k') === k) return;
     nb.setAttribute('data-k', k);
-    nb.innerHTML = '<p class="hint">Playing as</p><p class="myname">' + esc(cs.name) + '</p><p class="code">Class ' + esc(cs.code) + '</p>';
+    nb.innerHTML = '<p class="hint">Playing as</p><p class="myname">' + esc(cs.name) + '</p>';
   }
   function renderReadout() {
     fillNameBox();
