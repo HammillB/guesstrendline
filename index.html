@@ -258,10 +258,10 @@
   <h2 id="joinTitle">Join a class</h2>
   <p class="banner" id="joinBanner" hidden></p>
   <form class="form" id="joinForm" autocomplete="off">
-    <div class="field"><label for="joinCode">Class code</label><input type="text" id="joinCode" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
-    <div class="field"><label for="joinName">Your name</label><input type="text" id="joinName" maxlength="16" autocomplete="off" spellcheck="false"><p class="hint" style="margin:0">Leave this blank if your teacher turned on fun names.</p></div>
+    <div class="field" id="joinCodeField"><label for="joinCode">Class code</label><input type="text" id="joinCode" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
+    <div class="field" id="joinNameField" hidden><label for="joinName">Your name</label><input type="text" id="joinName" maxlength="16" autocomplete="off" spellcheck="false"><p class="hint" style="margin:0">Your first name or a nickname. Your teacher sees it.</p></div>
     <p class="err" id="joinMsg" role="alert" hidden></p>
-    <div class="row"><button id="joinGo" type="submit">Join</button><button class="small" id="joinBack" type="button">Back</button></div>
+    <div class="row"><button id="joinGo" type="submit">Next</button><button class="small" id="joinBack" type="button">Back</button></div>
   </form>
 </section>
 
@@ -1124,19 +1124,46 @@
     return n;
   }
 
-  /* join form */
+  /* join form: step 1 is the class code; step 2 (the name) only appears when the teacher has not turned on fun names */
+  var joinPending = null;   // { B, uid, code } once the code is accepted and a name is still needed
+  function joinStep(step) {
+    $('joinCodeField').hidden = step !== 1; $('joinNameField').hidden = step !== 2;
+    $('joinGo').textContent = step === 1 ? 'Next' : 'Join';
+    $('joinTitle').textContent = step === 1 ? 'Join a class' : 'What is your name?';
+    if (step === 1) joinPending = null;
+    say('joinMsg', '');
+  }
   $('joinClass').addEventListener('click', function () {
-    showView('join', 'joinCode'); say('joinMsg', '');
+    showView('join', 'joinCode'); joinStep(1);
     var s = store('fitline-session'); if (s && s.name) $('joinName').value = s.name;
     useBackend().then(function (b) { banner('joinBanner', b); });
   });
-  $('joinBack').addEventListener('click', function () { showView('start', 'joinClass'); });
+  $('joinBack').addEventListener('click', function () {
+    if (joinPending) { joinStep(1); $('joinCode').focus(); return; }
+    showView('start', 'joinClass');
+  });
   $('joinCode').addEventListener('input', function () { this.value = this.value.toUpperCase().replace(/[^A-Z]/g, ''); });
+  function finishJoin(B, uid, code, name) {
+    return B.joinClass(code, uid, name).then(function (p) {
+      store('fitline-session', { code: code, name: p.name });
+      joinPending = null;
+      enterClass(code, uid, p.name, B);
+    });
+  }
   $('joinForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    var code = $('joinCode').value.trim().toUpperCase(), name = $('joinName').value.replace(/\s+/g, ' ').trim();
+    say('joinMsg', '');
+    if (joinPending) {                                  // step 2: name
+      var nm = $('joinName').value.replace(/\s+/g, ' ').trim();
+      if (!nm) return say('joinMsg', 'Type your name so your teacher can see you.');
+      $('joinGo').disabled = true;
+      finishJoin(joinPending.B, joinPending.uid, joinPending.code, nm)
+        .catch(function (err) { say('joinMsg', friendly(err)); }).then(function () { $('joinGo').disabled = false; });
+      return;
+    }
+    var code = $('joinCode').value.trim().toUpperCase();   // step 1: code
     if (code.length !== 4) return say('joinMsg', 'The class code is 4 letters.');
-    say('joinMsg', ''); $('joinGo').disabled = true;
+    $('joinGo').disabled = true;
     var B;
     useBackend().then(function (b) {
       B = b;
@@ -1145,12 +1172,9 @@
       return B.getClass(code).then(function (c) {
         if (!c) { var e1 = new Error('No class with that code. Check the board and try again.'); e1.fit = true; throw e1; }
         if (c.phase === 'done') { var e2 = new Error('That class has already finished.'); e2.fit = true; throw e2; }
-        if (c.autoNames) name = funName();
-        else if (!name) { var e3 = new Error('Type your name so your teacher can see you.'); e3.fit = true; throw e3; }
-        return B.joinClass(code, u.uid, name);
-      }).then(function (p) {
-        store('fitline-session', { code: code, name: p.name });
-        enterClass(code, u.uid, p.name, B);
+        if (c.autoNames) return finishJoin(B, u.uid, code, funName());
+        joinPending = { B: B, uid: u.uid, code: code };
+        joinStep(2); $('joinName').focus();
       });
     }).catch(function (err) { say('joinMsg', friendly(err)); }).then(function () { $('joinGo').disabled = false; });
   });
