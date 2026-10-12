@@ -340,7 +340,24 @@
   <section class="board" id="roomDone" hidden>
     <h2>Final standings</h2>
     <div id="doneBody"></div>
-    <div class="actions"><button id="csvBtn" type="button">Download scores</button></div>
+    <div class="actions"><button id="againBtn" type="button">Play again</button><button class="alt" id="csvBtn" type="button">Download scores</button></div>
+    <div class="form" id="againPanel" hidden>
+      <h2>Next game</h2>
+      <p class="hint" style="margin:0">Same students, same names, fresh scores.</p>
+      <div class="field">
+        <span class="lab" id="againLevelLab">Difficulty</span>
+        <fieldset class="seg" aria-labelledby="againLevelLab">
+          <label><input type="radio" name="alevel" value="easy"><span>Easy</span></label>
+          <label><input type="radio" name="alevel" value="medium"><span>Medium</span></label>
+          <label><input type="radio" name="alevel" value="hard"><span>Hard</span></label>
+        </fieldset>
+      </div>
+      <div class="field">
+        <label for="againRounds">Rounds</label>
+        <select id="againRounds"><option value="5">5</option><option value="10">10</option><option value="15">15</option></select>
+      </div>
+      <div class="row"><button id="againGo" type="button">Start next game</button><button class="small" id="againCancel" type="button">Cancel</button></div>
+    </div>
   </section>
 </div>
 
@@ -494,6 +511,8 @@
     for (var i = 0; i <= 100; i++) { var x = i / 10; s += Math.abs((l1.m - l2.m) * x + (l1.b - l2.b)); }
     return s / 101;
   }
+  /* A class can play several games in a row. c.round counts rounds across all of them (so each student's saved lines never clash); c.base is how many were played before this game. */
+  function rn(c) { return c.round - (c.base || 0); }
   function scoreFor(gap) { return Math.round(100 * Math.max(0, 1 - gap / 2)); }
   function verdict(s) { return s >= 90 ? 'Excellent!' : s >= 75 ? 'Great shot' : s >= 50 ? 'Not bad' : 'Keep trying'; }
   function eq(l) { return 'y = ' + l.m.toFixed(2) + 'x ' + (l.b < 0 ? '-' : '+') + ' ' + Math.abs(l.b).toFixed(2); }
@@ -887,7 +906,7 @@
     if (phase === 'wait') {
       readout.innerHTML = '<h2>You are in!</h2>' + who + '<p class="hint">Waiting for your teacher to start the game.</p>';
     } else if (phase === 'place') {
-      readout.innerHTML = '<h2>Round ' + c.round + '</h2>' +
+      readout.innerHTML = '<h2>Round ' + rn(c) + '</h2>' +
         '<p class="hint">Drag the handles, then press Lock in. You cannot change it after that.</p>' +
         '<div class="eq"><span class="sw you"></span><span class="name">Your line</span><code>' + eq(lineFrom(hs[0], hs[1])) + '</code></div>' + (cs.msg ? '<p class="err">' + esc(cs.msg) + '</p>' : '');
     } else if (phase === 'locked') {
@@ -896,7 +915,7 @@
         '<p class="hint">Waiting for your teacher to reveal the answer.</p>';
     } else if (phase === 'revealed') {
       var idx = boardIndex(c), e = idx >= 0 ? c.board[idx] : null;
-      readout.innerHTML = '<h2>Round ' + c.round + ' result</h2>' +
+      readout.innerHTML = '<h2>Round ' + rn(c) + ' result</h2>' +
         (last && last.you ? eqBlock(last.you) : eqBlock(null) + '<p class="err">You did not lock in this round.</p>') +
         '<div class="score"><strong>' + (e ? e.r : 0) + '</strong><span>' + verdict(e ? e.r : 0) + '</span></div>' +
         '<dl class="stats"><dt>Your rank</dt><dd>' + (idx >= 0 ? '#' + (idx + 1) + ' of ' + c.board.length : '--') + '</dd><dt>Your total</dt><dd>' + (e ? e.t : 0) + '</dd></dl>' +
@@ -905,7 +924,7 @@
       var i2 = boardIndex(c), e2 = i2 >= 0 ? c.board[i2] : null;
       readout.innerHTML = '<h2>Game over</h2><div class="score"><strong>' + (i2 >= 0 ? '#' + (i2 + 1) : '--') + '</strong><span>of ' + ((c.board || []).length) + ' players</span></div>' +
         '<dl class="stats"><dt>Your total</dt><dd>' + (e2 ? e2.t : 0) + ' / ' + (c.rounds * 100) + '</dd></dl>' + rankList(c.board || [], cs.uid.slice(0, 8), 5) +
-        '<p class="note">Thanks for playing. Use Leave to go back to the menu.</p>';
+        '<p class="note">Thanks for playing. Your teacher may start another game, or use Leave to go back to the menu.</p>';
     }
   }
   function renderReadout() {
@@ -927,7 +946,7 @@
       btnNext.textContent = phase === 'done' ? 'Play again' : (round >= SOLO_ROUNDS ? 'See results' : 'Next round');
     } else {
       var i = boardIndex(c);
-      $('roundNo').textContent = pad(c ? c.round : 0, 2);
+      $('roundNo').textContent = pad(c ? rn(c) : 0, 2);
       $('roundMax').textContent = pad(c ? c.rounds : 0, 2);
       $('total').textContent = pad(i >= 0 ? c.board[i].t : 0, 4);
       $('bestLevel').textContent = 'Class ' + (cs ? cs.code : '');
@@ -1279,8 +1298,8 @@
   function standingsFor(upto) {
     var c = HOST.cls, names = uniqueNames(HOST.players), rows = HOST.players.map(function (p) {
       var rs = [], t = 0;
-      for (var r = 1; r <= upto; r++) { var s = scoreLine(p.lines && p.lines['r' + r], truthFor(r).best); rs.push(s); t += s; }
-      return { uid: p.uid, name: names[p.uid], total: t, rs: rs, last: upto > 0 ? rs[upto - 1] : 0, locked: !!(p.lines && p.lines['r' + c.round]) };
+      for (var r = (c.base || 0) + 1; r <= upto; r++) { var s = scoreLine(p.lines && p.lines['r' + r], truthFor(r).best); rs.push(s); t += s; }
+      return { uid: p.uid, name: names[p.uid], total: t, rs: rs, last: rs.length ? rs[rs.length - 1] : 0, locked: !!(p.lines && p.lines['r' + c.round]) };
     });
     rows.sort(function (a, b) { return (b.total - a.total) || (a.name < b.name ? -1 : 1); });
     return rows;
@@ -1294,6 +1313,7 @@
     $('roomLobby').hidden = !(c && c.phase === 'lobby');
     $('roomRound').hidden = !(c && (c.phase === 'guess' || c.phase === 'reveal'));
     $('roomDone').hidden = !(c && c.phase === 'done');
+    if (!(c && c.phase === 'done')) { $('againPanel').hidden = true; $('againBtn').hidden = false; }
     $('endClass').textContent = HOST.confirmEnd ? 'Really end and delete?' : 'End class';
     if (!c) return;
     if (c.phase === 'lobby') renderLobby();
@@ -1313,7 +1333,7 @@
   }
   function renderRound() {
     var c = HOST.cls, r = c.round, key = c.phase + ':' + r, d = truthFor(r), revealed = c.phase === 'reveal';
-    $('hRound').textContent = pad(r, 2); $('hRounds').textContent = pad(c.rounds, 2); $('hLevel').textContent = LEVELS[c.level].name;
+    $('hRound').textContent = pad(rn(c), 2); $('hRounds').textContent = pad(c.rounds, 2); $('hLevel').textContent = LEVELS[c.level].name;
     var rows = standingsFor(revealedCount()), locked = rows.filter(function (x) { return x.locked; }).length, total = rows.length;
     $('hLocked').textContent = 'Locked ' + locked + '/' + total;
     if (HOST.shown !== key) {
@@ -1329,7 +1349,7 @@
       hostScene.setCrowd(HOST.players.map(function (p) { return lineFromArr(p.lines && p.lines['r' + r]); }).filter(Boolean));
     }
     $('hostReveal').hidden = revealed; $('hostNext').hidden = !revealed;
-    $('hostNext').textContent = r >= c.rounds ? 'Finish' : 'Next round';
+    $('hostNext').textContent = rn(c) >= c.rounds ? 'Finish' : 'Next round';
     $('hostReveal').disabled = HOST.busy; $('hostNext').disabled = HOST.busy;
     var panel = $('hostPanel'), html, i;
     if (!revealed) {
@@ -1339,7 +1359,7 @@
     } else {
       var all = rows.map(function (x) { return x.last; }), avg = all.length ? Math.round(all.reduce(function (a, b) { return a + b; }, 0) / all.length) : 0;
       var top = rows.slice().sort(function (a, b) { return b.last - a.last; })[0];
-      html = '<h2>Round ' + r + ' standings</h2><dl class="stats"><dt>Class average</dt><dd>' + avg + '</dd>' + (top ? '<dt>Closest this round</dt><dd>' + esc(top.name) + ' (' + top.last + ')</dd>' : '') +
+      html = '<h2>Round ' + rn(c) + ' standings</h2><dl class="stats"><dt>Class average</dt><dd>' + avg + '</dd>' + (top ? '<dt>Closest this round</dt><dd>' + esc(top.name) + ' (' + top.last + ')</dd>' : '') +
         '<dt>True line</dt><dd>' + eq(d.best) + '</dd></dl>' + hostRankList(rows, 8) +
         '<p class="note">Cyan lines are the students\' lines. The pink line is the least-squares fit.</p>';
     }
@@ -1369,15 +1389,29 @@
     HOST.busy = true; say('roomMsg', ''); renderHost();
     return HOST.backend.updateClass(HOST.code, patch).catch(function (e) { say('roomMsg', friendly(e)); }).then(function () { if (HOST) { HOST.busy = false; renderHost(); } });
   }
-  $('startGame').addEventListener('click', function () { hostDo({ status: 'playing', phase: 'guess', round: 1 }); });
+  /* Play again: keep the same students, ask for a new difficulty and number of rounds, then go back to the lobby. */
+  $('againBtn').addEventListener('click', function () {
+    var c = HOST && HOST.cls; if (!c) return;
+    var r = document.querySelector('input[name="alevel"][value="' + c.level + '"]'); if (r) r.checked = true;
+    var sel = $('againRounds'); sel.value = String(c.rounds); if (sel.value !== String(c.rounds)) sel.value = '10';
+    $('againPanel').hidden = false; $('againBtn').hidden = true; $('againGo').focus();
+  });
+  $('againCancel').addEventListener('click', function () { $('againPanel').hidden = true; $('againBtn').hidden = false; });
+  $('againGo').addEventListener('click', function () {
+    var c = HOST && HOST.cls; if (!c) return;
+    var lv = document.querySelector('input[name="alevel"]:checked'), n = parseInt($('againRounds').value, 10) || 10;
+    $('againPanel').hidden = true; $('againBtn').hidden = false;
+    hostDo({ level: lv ? lv.value : c.level, rounds: n, seed: randomSeed(), base: c.round, board: [], status: 'lobby', phase: 'lobby' });
+  });
+  $('startGame').addEventListener('click', function () { hostDo({ status: 'playing', phase: 'guess', round: (HOST.cls.base || 0) + 1 }); });
   $('hostReveal').addEventListener('click', function () {
     var c = HOST.cls, r = c.round, rows = standingsFor(r);
-    var board = rows.slice(0, 80).map(function (x) { return { u: x.uid.slice(0, 8), n: x.name, t: x.total, r: x.rs[r - 1] }; });
+    var board = rows.slice(0, 80).map(function (x) { return { u: x.uid.slice(0, 8), n: x.name, t: x.total, r: x.rs[rn(c) - 1] }; });
     hostDo({ phase: 'reveal', board: board });
   });
   $('hostNext').addEventListener('click', function () {
     var c = HOST.cls;
-    if (c.round >= c.rounds) hostDo({ phase: 'done', status: 'done' });
+    if (rn(c) >= c.rounds) hostDo({ phase: 'done', status: 'done' });
     else hostDo({ phase: 'guess', round: c.round + 1 });
   });
   $('chips').addEventListener('click', function (e) {
