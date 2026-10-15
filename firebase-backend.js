@@ -38,6 +38,9 @@ try {
 const MAX_PLAYERS = 30;
 
 const classRef = (code) => doc(db, 'classes', code);
+// Head count for the class-size cap. Kept on its own document, not on the class document, because
+// every student listens to the class document and would be re-read each time someone joined.
+const rosterRef = (code) => doc(db, 'classes', code, 'meta', 'roster');
 const playerRef = (code, uid) => doc(db, 'classes', code, 'players', uid);
 
 function ready() {
@@ -61,7 +64,17 @@ const api = {
 
   // expiresAt is stored as a real timestamp so a Firestore TTL policy can clean up old classes.
   async createClass(code, data) {
-    await setDoc(classRef(code), { ...data, playerCount: 0, expiresAt: Timestamp.fromMillis(data.expiresAt) });
+    const expiresAt = Timestamp.fromMillis(data.expiresAt);
+    const batch = writeBatch(db);
+    batch.set(classRef(code), { ...data, expiresAt });
+    batch.set(rosterRef(code), { count: 0, expiresAt });
+    try {
+      await batch.commit();
+    } catch (e) {
+      // Rules from before the roster document refuse it; create the class alone so it still works
+      // (uncapped). A taken class code fails here too, which is what the caller retries on.
+      await setDoc(classRef(code), { ...data, expiresAt });
+    }
   },
 
   async getClass(code) {
@@ -83,25 +96,25 @@ const api = {
     if (s.exists()) return s.data();
     const now = Date.now();
     const p = { name, joinedAt: now, lines: {}, expiresAt: Timestamp.fromMillis(now + 24 * 3600 * 1000) };
-    // Creating the player and bumping the class head count must happen together: the security
+    // Creating the player and bumping the head count must happen together: the security
     // rules refuse the join unless both are in one batch and the count is still under the cap.
     const batch = writeBatch(db);
     batch.set(ref, p);
-    batch.update(classRef(code), { playerCount: increment(1) });
+    batch.update(rosterRef(code), { count: increment(1) });
     try {
       await batch.commit();
     } catch (e) {
       const again = await getDoc(ref).catch(() => null);        // joined a moment ago from this device
       if (again && again.exists()) return again.data();
-      const c = await getDoc(classRef(code)).catch(() => null);
-      if (c && c.exists() && (c.data().playerCount || 0) >= MAX_PLAYERS) {
+      const c = await getDoc(rosterRef(code)).catch(() => null);
+      if (c && c.exists() && (c.data().count || 0) >= MAX_PLAYERS) {
         const full = new Error('This class is full (' + MAX_PLAYERS + ' students). Ask your teacher.');
         full.fit = true;
         throw full;
       }
-      // Rules published before the class-size cap refuse the head-count update, but still accept a
-      // plain join. This keeps joining working in the gap between deploying the page and the rules.
-      // Under the new rules this plain write is refused, so it cannot get around the cap.
+      // Classes created before the head count existed have no roster document, so the update above
+      // fails; the rules still accept a plain join for those (and for older rules). A class that has a
+      // roster document refuses this plain write, so it cannot get around the cap.
       try { await setDoc(ref, p); return p; } catch (_) { /* fall through to the original error */ }
       throw e;
     }
@@ -127,13 +140,18 @@ const api = {
     // Free the seat so someone else can join.
     const batch = writeBatch(db);
     batch.delete(playerRef(code, uid));
-    batch.update(classRef(code), { playerCount: increment(-1) });
-    await batch.commit();
+    batch.update(rosterRef(code), { count: increment(-1) });
+    try {
+      await batch.commit();
+    } catch (e) {
+      await deleteDoc(playerRef(code, uid));                    // older class with no roster document
+    }
   },
 
   async deleteClass(code) {
     const snap = await getDocs(collection(db, 'classes', code, 'players'));
     await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+    await deleteDoc(rosterRef(code)).catch(() => {});
     await deleteDoc(classRef(code));
   }
 };
