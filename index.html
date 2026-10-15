@@ -1210,7 +1210,8 @@
   }
   $('joinClass').addEventListener('click', function () {
     showView('join', 'joinCode'); joinStep(1);
-    var s = store('fitline-session'); if (s && s.name) $('joinName').value = s.name;
+    $('joinCode').value = '';   // always start blank, never the last class code
+    $('joinName').value = '';   // never prefill: a shared device should not show the last student's name
     useBackend().then(function (b) { banner('joinBanner', b); });
   });
   $('joinBack').addEventListener('click', function () {
@@ -1249,6 +1250,7 @@
         if (c.phase === 'done') { var e2 = new Error('That class has already finished.'); e2.fit = true; throw e2; }
         if (c.autoNames) return finishJoin(B, u.uid, code, funName());
         joinPending = { B: B, uid: u.uid, code: code };
+        $('joinName').value = '';
         joinStep(2); $('joinName').focus();
       });
     }).catch(function (err) { say('joinMsg', friendly(err)); }).then(function () { $('joinGo').disabled = false; });
