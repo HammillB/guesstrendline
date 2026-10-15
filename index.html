@@ -1308,23 +1308,23 @@
   /* Human check for class creation (Cloudflare Turnstile). Only loaded for teachers, and only when
      the create-class Worker is switched on in firebase-backend.js. If it cannot load (for example a
      school filter blocks it) the page falls back to creating the class directly. */
-  var check = { id: null, loading: false, failed: false };
+  var humanCheck = { id: null, loading: false, failed: false };
   function startHumanCheck(b) {
-    if (check.id !== null || check.loading || check.failed) return;
-    check.loading = true;
+    if (humanCheck.id !== null || humanCheck.loading || humanCheck.failed) return;
+    humanCheck.loading = true;
     function render() {
-      check.loading = false;
+      humanCheck.loading = false;
       try {
         $('hostCheckField').hidden = false;
-        check.id = window.turnstile.render('#hostCheck', { sitekey: b.turnstileSiteKey, theme: 'dark' });
-      } catch (e) { check.failed = true; $('hostCheckField').hidden = true; }
+        humanCheck.id = window.turnstile.render('#hostCheck', { sitekey: b.turnstileSiteKey, theme: 'dark' });
+      } catch (e) { humanCheck.failed = true; $('hostCheckField').hidden = true; }
     }
     if (window.turnstile) return render();
     var s = document.createElement('script');
     s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
     s.async = true;
     s.onload = render;
-    s.onerror = function () { check.loading = false; check.failed = true; };
+    s.onerror = function () { humanCheck.loading = false; humanCheck.failed = true; };
     document.head.appendChild(s);
   }
 
@@ -1336,12 +1336,12 @@
         .catch(function (e) { say('hostSetupMsg', friendly(e)); })
         .then(function () { $('hostCreate').disabled = false; });
     }
-    if (b.remoteCreate && !check.failed) {
-      var token = check.id !== null && window.turnstile ? window.turnstile.getResponse(check.id) : '';
+    if (b.remoteCreate && !humanCheck.failed) {
+      var token = humanCheck.id !== null && window.turnstile ? window.turnstile.getResponse(humanCheck.id) : '';
       if (!token) { say('hostSetupMsg', 'Wait for the check above to finish, then press Create class.'); $('hostCreate').disabled = false; return; }
       return done(b.createClassRemote({ level: lv, rounds: n, autoNames: $('hn-on').checked, turnstileToken: token })
         .catch(function (e) {
-          if (check.id !== null && window.turnstile) window.turnstile.reset(check.id);   // each check works once
+          if (humanCheck.id !== null && window.turnstile) window.turnstile.reset(humanCheck.id);   // each check works once
           if (e && e.workerDown) return createDirect();                                 // Worker unreachable
           throw e;
         }));
