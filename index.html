@@ -708,6 +708,7 @@
       joinClass: function (code, id, name) {
         var db = load(), c = db[code];
         if (!c) return Promise.reject(fail('No class with that code.'));
+        if (!c.players[id] && Object.keys(c.players).length >= 30) return Promise.reject(fail('This class is full (30 students). Ask your teacher.'));
         if (!c.players[id]) c.players[id] = { name: name, joinedAt: Date.now(), lines: {} };
         save(db); return Promise.resolve(clone(c.players[id]));
       },

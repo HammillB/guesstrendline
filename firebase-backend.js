@@ -7,7 +7,7 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs,
-  onSnapshot, Timestamp
+  writeBatch, increment, onSnapshot, Timestamp
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
 // These values are public by design. Security comes from firestore.rules, not from hiding them.
@@ -34,6 +34,9 @@ try {
   db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 }
 
+// Keep in sync with the 30 in firestore.rules, which is what actually enforces the cap.
+const MAX_PLAYERS = 30;
+
 const classRef = (code) => doc(db, 'classes', code);
 const playerRef = (code, uid) => doc(db, 'classes', code, 'players', uid);
 
@@ -58,7 +61,7 @@ const api = {
 
   // expiresAt is stored as a real timestamp so a Firestore TTL policy can clean up old classes.
   async createClass(code, data) {
-    await setDoc(classRef(code), { ...data, expiresAt: Timestamp.fromMillis(data.expiresAt) });
+    await setDoc(classRef(code), { ...data, playerCount: 0, expiresAt: Timestamp.fromMillis(data.expiresAt) });
   },
 
   async getClass(code) {
@@ -80,7 +83,24 @@ const api = {
     if (s.exists()) return s.data();
     const now = Date.now();
     const p = { name, joinedAt: now, lines: {}, expiresAt: Timestamp.fromMillis(now + 24 * 3600 * 1000) };
-    await setDoc(ref, p);
+    // Creating the player and bumping the class head count must happen together: the security
+    // rules refuse the join unless both are in one batch and the count is still under the cap.
+    const batch = writeBatch(db);
+    batch.set(ref, p);
+    batch.update(classRef(code), { playerCount: increment(1) });
+    try {
+      await batch.commit();
+    } catch (e) {
+      const again = await getDoc(ref).catch(() => null);        // joined a moment ago from this device
+      if (again && again.exists()) return again.data();
+      const c = await getDoc(classRef(code)).catch(() => null);
+      if (c && c.exists() && (c.data().playerCount || 0) >= MAX_PLAYERS) {
+        const full = new Error('This class is full (' + MAX_PLAYERS + ' students). Ask your teacher.');
+        full.fit = true;
+        throw full;
+      }
+      throw e;
+    }
     return p;
   },
 
@@ -100,7 +120,11 @@ const api = {
   },
 
   async kick(code, uid) {
-    await deleteDoc(playerRef(code, uid));
+    // Free the seat so someone else can join.
+    const batch = writeBatch(db);
+    batch.delete(playerRef(code, uid));
+    batch.update(classRef(code), { playerCount: increment(-1) });
+    await batch.commit();
   },
 
   async deleteClass(code) {

@@ -18,11 +18,22 @@ service cloud.firestore {
         && request.resource.data.level in ['easy', 'medium', 'hard']
         && request.resource.data.rounds is int
         && request.resource.data.rounds >= 1
-        && request.resource.data.rounds <= 20;
+        && request.resource.data.rounds <= 20
+        && request.resource.data.get('playerCount', 0) == 0;
 
       allow update: if signedIn()
         && resource.data.hostUid == request.auth.uid
         && request.resource.data.hostUid == resource.data.hostUid;
+
+      // Class size cap (30). A student joining may change only playerCount, by exactly +1, and only
+      // in the same batch that creates their own player document. Rules cannot count documents,
+      // so this head count on the class document is what the cap is checked against.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerCount'])
+        && request.resource.data.playerCount == resource.data.get('playerCount', 0) + 1
+        && request.resource.data.playerCount <= 30
+        && !exists(/databases/$(database)/documents/classes/$(code)/players/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/classes/$(code)/players/$(request.auth.uid));
       allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
 
       match /players/{uid} {
@@ -33,6 +44,9 @@ service cloud.firestore {
         allow create: if signedIn()
           && request.auth.uid == uid
           && classDoc(code).phase != 'done'
+          && classDoc(code).get('playerCount', 0) < 30
+          && getAfter(/databases/$(database)/documents/classes/$(code)).data.get('playerCount', 0)
+               == classDoc(code).get('playerCount', 0) + 1
           && request.resource.data.keys().hasOnly(['name', 'joinedAt', 'lines', 'expiresAt'])
           && request.resource.data.expiresAt is timestamp
           && request.resource.data.name is string
