@@ -1210,6 +1210,7 @@
   }
   $('joinClass').addEventListener('click', function () {
     showView('join', 'joinCode'); joinStep(1);
+    $('joinCode').value = '';   // always start blank, never the last class code
     $('joinName').value = '';   // never prefill: a shared device should not show the last student's name
     useBackend().then(function (b) { banner('joinBanner', b); });
   });
