@@ -218,6 +218,23 @@
   .namebox { padding-block: 16px; }
   .namebox .hint { margin: 0 0 8px; }
   .namebox .myname { margin-bottom: 0; }
+  /* Fun names only: the animal's 4-frame pixel sprite sits to the right of the name */
+  .namebox { container-type: inline-size; }
+  .whoami { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .whoami .myname { flex: 1 1 auto; min-width: 0; }
+  .pet {
+    --s: 3; flex: none; width: calc(32px * var(--s)); height: calc(32px * var(--s));
+    background-repeat: no-repeat; background-size: calc(128px * var(--s)) calc(32px * var(--s));
+    image-rendering: pixelated; animation: pet-play 0.8s steps(1) infinite;
+  }
+  @keyframes pet-play {
+    0%   { background-position: calc(0px * var(--s)) 0; }
+    25%  { background-position: calc(-32px * var(--s)) 0; }
+    50%  { background-position: calc(-64px * var(--s)) 0; }
+    75%  { background-position: calc(-96px * var(--s)) 0; }
+  }
+  @container (max-width: 380px) { .pet { --s: 2; } }
+  @container (max-width: 300px) { .whoami { flex-direction: column; align-items: flex-start; } }
   .namebox .code { margin: 0; font: 400 0.7rem/1.4 var(--display); color: var(--muted); text-transform: uppercase; }
   .myname { margin: 0 0 14px; font: 400 clamp(1.3rem, 6.4vw, 2rem)/1.4 var(--display); color: var(--yellow); text-shadow: 3px 3px 0 var(--magenta); overflow-wrap: anywhere; }
   a.small { display: inline-block; text-decoration: none; font-family: var(--display); line-height: 1.4; }
@@ -228,6 +245,7 @@
   @media (prefers-reduced-motion: reduce) {
     .best-line.draw { animation: none; stroke-dasharray: none; }
     .record, .prompt, .menu-btn .go { animation: none !important; }
+    .pet { animation: none; }
   }
 </style></head><body><main>
 <!-- Title screen -->
@@ -942,10 +960,20 @@
     var nb = $('nameBox'), show = mode === 'class' && !!cs;
     nb.hidden = !show;
     if (!show) { nb.removeAttribute('data-k'); return; }
-    var k = cs.name + '|' + cs.code;
+    /* the sprite only appears when the teacher turned on Fun names; typed names never get one */
+    var pet = cs.cls && cs.cls.autoNames ? petFor(cs.name) : '';
+    var k = cs.name + '|' + cs.code + '|' + pet;
     if (nb.getAttribute('data-k') === k) return;
     nb.setAttribute('data-k', k);
-    nb.innerHTML = '<p class="hint">Playing as</p><p class="myname">' + esc(cs.name) + '</p>';
+    var nm = '<p class="myname">' + esc(cs.name) + '</p>';
+    nb.innerHTML = '<p class="hint">Playing as</p>' + (pet
+      ? '<div class="whoami">' + nm + '<span class="pet" aria-hidden="true" style="background-image:url(sprites/' + pet + '.png)"></span></div>'
+      : nm);
+  }
+  /* "Sassy Squirrel" -> "squirrel", but only if the last word is one of our known animals */
+  function petFor(name) {
+    var w = String(name || '').split(' ').pop();
+    return NAME_ANI.indexOf(w) >= 0 ? w.toLowerCase() : '';
   }
   function renderReadout() {
     fillNameBox();
