@@ -40,7 +40,7 @@ const MAX_PLAYERS = 30;
 // Teacher-side class creation through the Worker in worker/. While either value is blank the page
 // creates classes directly, exactly as before. See worker/README.md.
 const CREATE_CLASS_URL = '';     // for example '/api/create-class'
-const TURNSTILE_SITE_KEY = '';   // the public site key from the Cloudflare Turnstile widget
+const TURNSTILE_SITE_KEY = '0x4AAAAAAFXMCYp-MF2hOsXP';   // the public site key from the Cloudflare Turnstile widget
 
 const classRef = (code) => doc(db, 'classes', code);
 // Head count for the class-size cap. Kept on its own document, not on the class document, because
