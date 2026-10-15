@@ -836,7 +836,7 @@
     renderYou();
   }
   function resetHandles() { hs = [{ x: 1.5, y: 5 }, { x: 8.5, y: 5 }]; }
-  function setAnimating(v) { animating = v; btnCheck.disabled = v; }
+  function setAnimating(v) { animating = v; btnCheck.disabled = v || phase !== 'place'; }
 
   function renderYou() {
     var hide = phase === 'wait';
@@ -1004,11 +1004,13 @@
       $('roundMax').textContent = pad(c ? c.rounds : 0, 2);
       $('total').textContent = pad(i >= 0 ? c.board[i].t : 0, 4);
       $('bestLevel').textContent = 'Class ' + (cs ? cs.code : '');
-      btnCheck.textContent = 'Lock in';
+      btnCheck.textContent = phase === 'locked' ? 'Locked in' : 'Lock in';
     }
     $('levels').hidden = !solo;
     $('toMenu').textContent = solo ? 'Menu' : 'Leave';
-    btnCheck.hidden = phase !== 'place';
+    /* a student's button stays put after locking in, greyed out, so they can see it took */
+    btnCheck.hidden = !(phase === 'place' || (!solo && phase === 'locked'));
+    btnCheck.disabled = animating || phase !== 'place';
     btnNext.hidden = !(solo && (phase === 'revealed' || phase === 'done'));
     residWrap.hidden = phase !== 'revealed';
     renderYou();
