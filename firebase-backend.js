@@ -5,7 +5,8 @@ import {
   getAuth, onAuthStateChanged, signInAnonymously
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import {
-  initializeFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs,
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs,
   onSnapshot, Timestamp
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
@@ -20,7 +21,18 @@ const app = initializeApp({
 });
 const auth = getAuth(app);
 // School networks often block WebSockets; let the SDK fall back to long polling.
-const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+// A persistent local cache lets a refreshed page resume its listeners and be billed only for
+// documents that changed in the meantime (within about 30 minutes), instead of re-reading all of them.
+// If the browser blocks IndexedDB (some private modes), fall back to the default in-memory cache.
+let db;
+try {
+  db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
+} catch (e) {
+  db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+}
 
 const classRef = (code) => doc(db, 'classes', code);
 const playerRef = (code, uid) => doc(db, 'classes', code, 'players', uid);
