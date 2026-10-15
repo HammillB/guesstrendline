@@ -754,13 +754,15 @@
 
   var chosen = null;
   /* The online backend (Firebase) registers itself as window.FitBackend. If it is missing or blocked, fall back to practice mode. */
+  /* A slow school network can take a while to load it, so a timeout only falls back for this one call:
+     the next call checks again instead of staying in practice mode for good. */
   function useBackend() {
     if (chosen) return Promise.resolve(chosen);
     return new Promise(function (res) {
-      function fin() { chosen = window.FitBackend || practice; res(chosen); }
+      function fin() { if (window.FitBackend || window.fitBackendFailed) chosen = window.FitBackend || practice; res(chosen || practice); }
       if (window.FitBackend || window.fitBackendFailed) return fin();
       window.addEventListener('fitbackend', fin, { once: true });
-      setTimeout(fin, 5000);
+      setTimeout(fin, 15000);
     });
   }
   function friendly(e) {
@@ -1027,7 +1029,10 @@
     main.setPoints(pts, main.dots.length > 0, function () { setAnimating(false); });
     ui();
   }
-  function startGame() { mode = 'solo'; round = 0; scores = []; newRecord = false; cs = null; newRound(); }
+  function startGame() {
+    var picked = document.querySelector('input[name="level"]:checked');   // a class game may have changed level
+    if (picked) level = picked.value;
+    mode = 'solo'; round = 0; scores = []; newRecord = false; cs = null; newRound(); }
   function check() {
     if (phase !== 'place' || animating) return;
     var you = lineFrom(hs[0], hs[1]);
@@ -1096,7 +1101,8 @@
            On later rounds a student who has been connected all along cannot have a line yet,
            so skipping the read saves one Firestore read per student per round. */
         if (firstRound) cs.backend.getPlayer(cs.code, cs.uid).then(function (p) {
-          if (!cs || cs.round !== rr || !p) return;
+          if (!cs || cs.round !== rr) return;
+          if (!p) return removedFromClass();
           var a = p.lines && p.lines['r' + rr];
           if (a && phase === 'place') { cs.myArr = a; setHandlesFromArr(a); phase = 'locked'; ui(); }
         }).catch(function () {});
@@ -1136,12 +1142,21 @@
     var arr = lineToArr(), rr = cs.round;
     cs.myArr = arr; phase = 'locked'; cs.msg = '';
     ui();
-    cs.backend.lockLine(cs.code, cs.uid, rr, arr).catch(function (e) {
+    var B = cs.backend, code = cs.code, uid = cs.uid;
+    B.lockLine(code, uid, rr, arr).catch(function (e) {
       if (!cs || cs.round !== rr) return;
-      if (phase === 'locked') { phase = 'place'; cs.myArr = null; }
-      cs.msg = friendly(e);
-      ui();
+      /* A refused lock-in may mean the teacher removed this student; say that rather than a vague error. */
+      return B.getPlayer(code, uid).catch(function () { return true; }).then(function (p) {
+        if (!cs || cs.round !== rr) return;
+        if (!p) return removedFromClass();
+        if (phase === 'locked') { phase = 'place'; cs.myArr = null; }
+        cs.msg = friendly(e);
+        ui();
+      });
     });
+  }
+  function removedFromClass() {
+    leaveClass(); showView('start'); setNotice('Your teacher removed you from that class.');
   }
 
   /* ---------- navigation ---------- */
@@ -1309,6 +1324,9 @@
      the create-class Worker is switched on in firebase-backend.js. If it cannot load (for example a
      school filter blocks it) the page falls back to creating the class directly. */
   var humanCheck = { id: null, loading: false, failed: false };
+  /* The check cannot run here (blocked challenge, unsupported browser): create classes directly instead. */
+  function humanCheckGaveUp() { humanCheck.failed = true; $('hostCheckField').hidden = true; say('hostSetupMsg', ''); }
+  function resetHumanCheck() { if (humanCheck.id !== null && window.turnstile) window.turnstile.reset(humanCheck.id); }   // each check works once
   function startHumanCheck(b) {
     if (humanCheck.id !== null || humanCheck.loading || humanCheck.failed) return;
     humanCheck.loading = true;
@@ -1316,8 +1334,13 @@
       humanCheck.loading = false;
       try {
         $('hostCheckField').hidden = false;
-        humanCheck.id = window.turnstile.render('#hostCheck', { sitekey: b.turnstileSiteKey, theme: 'dark' });
-      } catch (e) { humanCheck.failed = true; $('hostCheckField').hidden = true; }
+        humanCheck.id = window.turnstile.render('#hostCheck', {
+          sitekey: b.turnstileSiteKey, theme: 'dark',
+          'error-callback': function () { humanCheckGaveUp(); return true; },
+          'unsupported-callback': humanCheckGaveUp,
+          'timeout-callback': resetHumanCheck
+        });
+      } catch (e) { humanCheckGaveUp(); }
     }
     if (window.turnstile) return render();
     var s = document.createElement('script');
@@ -1340,8 +1363,8 @@
       var token = humanCheck.id !== null && window.turnstile ? window.turnstile.getResponse(humanCheck.id) : '';
       if (!token) { say('hostSetupMsg', 'Wait for the check above to finish, then press Create class.'); $('hostCreate').disabled = false; return; }
       return done(b.createClassRemote({ level: lv, rounds: n, autoNames: $('hn-on').checked, turnstileToken: token })
-        .catch(function (e) {
-          if (humanCheck.id !== null && window.turnstile) window.turnstile.reset(humanCheck.id);   // each check works once
+        .then(function (code) { resetHumanCheck(); return code; }, function (e) {
+          resetHumanCheck();
           if (e && e.workerDown) return createDirect();                                 // Worker unreachable
           throw e;
         }));
