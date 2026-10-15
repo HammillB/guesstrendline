@@ -8,7 +8,7 @@ A classroom game for practicing regression by eye. Students drag two handles to 
 
 - 10 rounds per game, with a new random scatter plot each round (rising or falling trend).
 - Title screen with three choices: Play solo, Join a class (students), and Launch a class game (teacher). Arrow keys and Enter work on the menu.
-- Class mode: anyone can launch a class (no login), pick a difficulty and round count, and gets a 4-letter code for the board. Students enter the code and a name (no login). A class holds up to 30 students; the cap is enforced in `firestore.rules` through a `playerCount` field on the class document, and a kicked student frees their seat. Everyone sees the same dots each round, the teacher reveals the answer, and a live scoreboard, final podium and CSV download follow.
+- Class mode: anyone can launch a class (no login), pick a difficulty and round count, and gets a 4-letter code for the board. Students enter the code and a name (no login). A class holds up to 30 students; the cap is enforced in `firestore.rules` through a head count on its own `meta/roster` document (separate from the class document so students are not re-read on every join), and a kicked student frees their seat. Everyone sees the same dots each round, the teacher reveals the answer, and a live scoreboard, final podium and CSV download follow.
 - Real pages for search engines and sharing: `/how-to-play/`, `/teachers/`, `/about/`, `/privacy/`, `/terms/`, all styled by `site.css` and listed in `sitemap.xml`. The old `/#how`, `/#about`, `/#privacy` and `/#terms` links redirect to them. The home page carries JSON-LD (WebApplication) structured data.
 - Retro arcade look: pixel fonts, a CRT-style plot screen, and a HUD with round, total and hi-score. Fonts load from Google Fonts.
 - On Next Round, every dot glides to its new spot after its own short random delay. Check Line is held until they land, and reduced-motion settings skip the animation.
@@ -25,7 +25,7 @@ Class mode uses Firebase (free Spark plan). The config is already in `firebase-b
 1. Build > Firestore Database: create the database (production mode).
 2. Build > Authentication > Sign-in method: enable **Anonymous** (students and teachers).
 3. Paste `firestore.rules` into Firestore > Rules and Publish.
-4. Firestore > TTL: add two policies on the field `expiresAt`, one for collection group `classes` and one for collection group `players`. The privacy policy says unfinished classes are removed automatically after about a day, and this is what makes that true.
+4. Firestore > TTL: add three policies on the field `expiresAt`, for collection groups `classes`, `players` and `meta`. The privacy policy says unfinished classes are removed automatically after about a day, and this is what makes that true.
 5. Update the contact email in the About page if it changes (search `info@fittheline.com` in `index.html`).
 
 If the class server cannot be reached, the page shows a "practice mode" banner and keeps classes in the browser's storage, so a teacher tab and student tabs on one device can rehearse.
