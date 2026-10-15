@@ -99,6 +99,10 @@ const api = {
         full.fit = true;
         throw full;
       }
+      // Rules published before the class-size cap refuse the head-count update, but still accept a
+      // plain join. This keeps joining working in the gap between deploying the page and the rules.
+      // Under the new rules this plain write is refused, so it cannot get around the cap.
+      try { await setDoc(ref, p); return p; } catch (_) { /* fall through to the original error */ }
       throw e;
     }
     return p;
