@@ -1,0 +1,15 @@
+# Fit the Line: create-class Worker.
+# Deploy with:  npx wrangler deploy
+# The route puts the Worker at https://fittheline.com/api/create-class, the same site as the game,
+# so the page needs no cross-site settings. Nothing else on the domain is affected.
+name = "fit-the-line-create-class"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+routes = [
+  { pattern = "fittheline.com/api/*", zone_name = "fittheline.com" }
+]
+
+# Secrets are set with `npx wrangler secret put NAME`, never written here:
+#   TURNSTILE_SECRET
+#   FIREBASE_SERVICE_ACCOUNT

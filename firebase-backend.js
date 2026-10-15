@@ -37,6 +37,11 @@ try {
 // Keep in sync with the 30 in firestore.rules, which is what actually enforces the cap.
 const MAX_PLAYERS = 30;
 
+// Teacher-side class creation through the Worker in worker/. While either value is blank the page
+// creates classes directly, exactly as before. See worker/README.md.
+const CREATE_CLASS_URL = '';     // for example '/api/create-class'
+const TURNSTILE_SITE_KEY = '0x4AAAAAAFXMCYp-MF2hOsXP';   // the public site key from the Cloudflare Turnstile widget
+
 const classRef = (code) => doc(db, 'classes', code);
 // Head count for the class-size cap. Kept on its own document, not on the class document, because
 // every student listens to the class document and would be re-read each time someone joined.
@@ -61,6 +66,36 @@ const api = {
   // Anyone can host a class: a teacher is just a signed-in (anonymous) browser.
   async signInTeacher() { return api.signInAnonymous(); },
   async currentTeacher() { return api.signInAnonymous(); },
+
+  remoteCreate: !!(CREATE_CLASS_URL && TURNSTILE_SITE_KEY),
+  turnstileSiteKey: TURNSTILE_SITE_KEY,
+
+  // Asks the Worker to create the class. Returns the new class code. An error with workerDown set
+  // means the Worker could not be reached, so the caller may fall back to creating it directly.
+  async createClassRemote({ level, rounds, autoNames, turnstileToken }) {
+    const user = auth.currentUser || (await api.signInAnonymous(), auth.currentUser);
+    const idToken = await user.getIdToken();
+    let res;
+    try {
+      res = await fetch(CREATE_CLASS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level, rounds, autoNames, turnstileToken, idToken })
+      });
+    } catch (e) {
+      const down = new Error('Could not reach the class server.');
+      down.fit = true; down.workerDown = true;
+      throw down;
+    }
+    let out = null;
+    try { out = await res.json(); } catch (e) { /* not JSON */ }
+    if (res.ok && out && out.code) return out.code;
+    const err = new Error((out && out.error) || 'The class server could not create the class.');
+    err.fit = true;
+    err.humanCheckFailed = res.status === 403;
+    err.workerDown = res.status >= 500 || res.status === 404;
+    throw err;
+  },
 
   // expiresAt is stored as a real timestamp so a Firestore TTL policy can clean up old classes.
   async createClass(code, data) {
