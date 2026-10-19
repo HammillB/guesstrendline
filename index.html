@@ -512,8 +512,12 @@
       var y = yc + m * (x - 5) + gauss(rnd) * sd;
       if (y > 0.2 && y < 9.8) pts.push({ x: x, y: y });
     }
+    var used = {};
     for (var k = 0; k < L.out; k++) {
-      var p = pts[Math.floor(rnd() * pts.length)];
+      var idx;
+      do { idx = Math.floor(rnd() * pts.length); } while (used[idx]); /* never pick the same point twice */
+      used[idx] = true;
+      var p = pts[idx];
       var dir = p.y > 5 ? -1 : 1;
       p.y = clamp(p.y + dir * (3 + rnd() * 1.5), 0.2, 9.8);
     }
@@ -847,7 +851,7 @@
       handleNodes[i].classList.toggle('locked', phase !== 'place');
     }
     main.setYou(hide ? null : lineFrom(hs[0], hs[1]));
-    if (phase === 'place' && mode === 'solo') renderReadout();
+    if (phase === 'place') renderReadout();
   }
   function renderResid() {
     var which = $('resid').value;
@@ -1060,7 +1064,7 @@
   }
 
   /* ---------- student: join and play in a class ---------- */
-  function lineToArr(l) { return [Math.round(hs[0].x * 1000) / 1000, Math.round(hs[0].y * 1000) / 1000, Math.round(hs[1].x * 1000) / 1000, Math.round(hs[1].y * 1000) / 1000]; }
+  function lineToArr() { return [Math.round(hs[0].x * 1000) / 1000, Math.round(hs[0].y * 1000) / 1000, Math.round(hs[1].x * 1000) / 1000, Math.round(hs[1].y * 1000) / 1000]; }
   function setHandlesFromArr(a) { hs = [{ x: a[0], y: a[1] }, { x: a[2], y: a[3] }]; }
 
   function enterClass(code, uid, name, backend) {
@@ -1084,7 +1088,7 @@
   }
   function onClassDoc(c) {
     if (!cs) return;
-    if (!c) { var gone = cs; leaveClass(); showView('start'); setNotice('Your teacher ended that class.'); return; }
+    if (!c) { leaveClass(); showView('start'); setNotice('Your teacher ended that class.'); return; }
     cs.cls = c;
     var key = c.phase + ':' + c.round;
     if (c.phase === 'lobby') {
@@ -1111,7 +1115,6 @@
       }
     } else if (c.phase === 'reveal' || c.phase === 'done') {
       if (cs.shown !== key) {
-        var wasLocked = cs.round === c.round && cs.myArr;
         cs.shown = key;
         if (cs.round !== c.round) { cs.round = c.round; loadRound(c); main.setPoints(pts, false); cs.myArr = null; }
         phase = c.phase === 'done' ? 'done' : 'revealed';
@@ -1413,10 +1416,12 @@
   /* Names: trim duplicates by adding 2, 3, ... in join order. */
   function uniqueNames(players) {
     var order = players.slice().sort(function (a, b) { return (a.joinedAt - b.joinedAt) || (a.uid < b.uid ? -1 : 1); });
-    var seen = {}, out = {};
+    var seen = {}, taken = {}, out = {};
     order.forEach(function (p) {
-      var base = p.name, k = base.toLowerCase(), n = (seen[k] = (seen[k] || 0) + 1);
-      out[p.uid] = n > 1 ? base + ' ' + n : base;
+      var base = p.name, k = base.toLowerCase(), n = seen[k] || 0, nm = n ? base + ' ' + (n + 1) : base;
+      while (taken[nm.toLowerCase()]) { n++; nm = base + ' ' + (n + 1); } /* a typed "Sam 2" must not collide with the renamed second "Sam" */
+      seen[k] = n + 1; taken[nm.toLowerCase()] = true;
+      out[p.uid] = nm;
     });
     return out;
   }
@@ -1426,7 +1431,7 @@
       for (var r = (c.base || 0) + 1; r <= upto; r++) { var s = scoreLine(p.lines && p.lines['r' + r], truthFor(r).best); rs.push(s); t += s; }
       return { uid: p.uid, name: names[p.uid], total: t, rs: rs, last: rs.length ? rs[rs.length - 1] : 0, locked: !!(p.lines && p.lines['r' + c.round]) };
     });
-    rows.sort(function (a, b) { return (b.total - a.total) || (a.name < b.name ? -1 : 1); });
+    rows.sort(function (a, b) { return (b.total - a.total) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0) || (a.uid < b.uid ? -1 : 1); });
     return rows;
   }
   function revealedCount() { var c = HOST.cls; return c.phase === 'guess' ? c.round - 1 : c.round; }
@@ -1480,11 +1485,11 @@
     if (!revealed) {
       var meter = ''; for (i = 0; i < total; i++) meter += '<i class="' + (i < locked ? 'on' : '') + '"></i>';
       html = '<h2>Locked in ' + locked + ' of ' + total + '</h2><div class="meter">' + meter + '</div><div class="chips">' +
-        rows.slice().sort(function (a, b) { return a.name < b.name ? -1 : 1; }).map(function (x) { return '<span class="chip' + (x.locked ? ' ok' : '') + '">' + esc(x.name) + '</span>'; }).join('') + '</div>';
+        rows.slice().sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; }).map(function (x) { return '<span class="chip' + (x.locked ? ' ok' : '') + '">' + esc(x.name) + '</span>'; }).join('') + '</div>';
     } else {
       var all = rows.map(function (x) { return x.last; }), avg = all.length ? Math.round(all.reduce(function (a, b) { return a + b; }, 0) / all.length) : 0;
       var top = rows.slice().sort(function (a, b) { return b.last - a.last; })[0];
-      html = '<h2>Round ' + rn(c) + ' standings</h2><dl class="stats"><dt>Class average</dt><dd>' + avg + '</dd>' + (top ? '<dt>Closest this round</dt><dd>' + esc(top.name) + ' (' + top.last + ')</dd>' : '') +
+      html = '<h2>Round ' + rn(c) + ' standings</h2><dl class="stats"><dt>Class average</dt><dd>' + avg + '</dd>' + (top && top.last > 0 ? '<dt>Closest this round</dt><dd>' + esc(top.name) + ' (' + top.last + ')</dd>' : '') +
         '<dt>True line</dt><dd>' + eq(d.best) + '</dd></dl>' + hostRankList(rows, 8) +
         '<p class="note">Cyan lines are the students\' lines. The pink line is the least-squares fit.</p>';
     }
@@ -1570,6 +1575,7 @@
       var blob = new Blob([lines.join('\n')], { type: 'text/csv' }), a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = 'fit-the-line-' + HOST.code + '.csv';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
     } catch (e) { say('roomMsg', 'Downloads are not available here.'); }
   });
 
