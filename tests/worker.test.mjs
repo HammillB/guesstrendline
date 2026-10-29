@@ -111,4 +111,35 @@ await t('preflight OK; wrong path 404; GET 405; unset secrets 500', async () => 
   assert.equal((await call(null, { method: 'GET' })).status, 405);
   assert.equal((await call(await good(), { env: {} })).status, 500);
 });
+// A fake D1 that keeps the counts in a Map, keyed like the table's primary key.
+function fakeD1() {
+  const rows = new Map();
+  return {
+    rows,
+    prepare: (sql) => ({ bind: (day, ev) => ({ run: async () => {
+      assert.match(sql, /ON CONFLICT \(day, event\) DO UPDATE SET n = n \+ 1/);
+      rows.set(day + '|' + ev, (rows.get(day + '|' + ev) || 0) + 1);
+    } }) })
+  };
+}
+await t('event: known name counts once per call, for today', async () => {
+  const STATS = fakeD1();
+  for (let i = 0; i < 3; i++) assert.equal((await call({ e: 'solo_round' }, { env: { STATS }, path: '/api/event' })).status, 204);
+  assert.equal((await call({ e: 'class_join' }, { env: { STATS }, path: '/api/event' })).status, 204);
+  const day = new Date().toISOString().slice(0, 10);
+  assert.equal(STATS.rows.get(day + '|solo_round'), 3);
+  assert.equal(STATS.rows.get(day + '|class_join'), 1);
+  assert.equal(STATS.rows.size, 2);
+});
+await t('event: unknown name, no origin, foreign origin, GET all refused', async () => {
+  const STATS = fakeD1();
+  assert.equal((await call({ e: 'hack' }, { env: { STATS }, path: '/api/event' })).status, 400);
+  assert.equal((await call({ e: 'solo_round' }, { env: { STATS }, path: '/api/event', origin: null })).status, 403);
+  assert.equal((await call({ e: 'solo_round' }, { env: { STATS }, path: '/api/event', origin: 'https://evil.example' })).status, 403);
+  assert.equal((await call(null, { env: { STATS }, path: '/api/event', method: 'GET' })).status, 405);
+  assert.equal(STATS.rows.size, 0);
+});
+await t('event: works (and counts nothing) without the D1 binding', async () => {
+  assert.equal((await call({ e: 'solo_game' }, { env: {}, path: '/api/event' })).status, 204);
+});
 console.log(n + ' passed');

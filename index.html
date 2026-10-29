@@ -782,6 +782,18 @@
     return 'Something went wrong' + (c ? ' (' + c + ')' : e && e.message ? ' (' + String(e.message).slice(0, 80) + ')' : '') + '. Check your connection and try again.';
   }
   function say(id, msg) { var n = $(id); n.textContent = msg || ''; n.hidden = !msg; }
+  /* Usage counts: tells the Worker "one more of this event today". Nothing about the player is sent.
+     Only on the live site, and class events only when the real class server is in use (not practice mode). */
+  function track(e, B) {
+    if (B && B.mode !== 'online') return;
+    if (!/^(www\.)?fittheline\.com$/.test(location.hostname)) return;
+    try {
+      var body = JSON.stringify({ e: e });
+      if (!(navigator.sendBeacon && navigator.sendBeacon('/api/event', new Blob([body], { type: 'application/json' })))) {
+        fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
+      }
+    } catch (_) { /* counting must never break the game */ }
+  }
 
   /* ---------- player screen (solo and student) ---------- */
   var mode = 'solo';                 // 'solo' or 'class'
@@ -1045,6 +1057,7 @@
     var g = gapBetween(you, best);
     var s = scoreFor(g);
     scores.push(s);
+    track('solo_round');
     last = { you: you, g: g, s: s, sseY: sse(pts, you), sseB: sse(pts, best) };
     phase = 'revealed';
     renderReveal();
@@ -1058,6 +1071,7 @@
         var prev = loadBest()[level];
         newRecord = (prev == null) || avg > prev;
         saveBest(level, avg);
+        track('solo_game');
         ui();
       } else newRound();
     } else if (phase === 'done') startGame();
@@ -1148,7 +1162,7 @@
     cs.myArr = arr; phase = 'locked'; cs.msg = '';
     ui();
     var B = cs.backend, code = cs.code, uid = cs.uid;
-    B.lockLine(code, uid, rr, arr).catch(function (e) {
+    B.lockLine(code, uid, rr, arr).then(function () { track('class_line', B); }, function (e) {
       if (!cs || cs.round !== rr) return;
       /* A refused lock-in may mean the teacher removed this student; say that rather than a vague error. */
       return B.getPlayer(code, uid).catch(function () { return true; }).then(function (p) {
@@ -1241,6 +1255,7 @@
   $('joinCode').addEventListener('input', function () { this.value = this.value.toUpperCase().replace(/[^A-Z]/g, ''); });
   function finishJoin(B, uid, code, name) {
     return B.joinClass(code, uid, name).then(function (p) {
+      if (Date.now() - p.joinedAt < 60000) track('class_join', B);   // a new seat, not a rejoin from this device
       store('fitline-session', { code: code, name: p.name });
       joinPending = null;
       enterClass(code, uid, p.name, B);
@@ -1360,7 +1375,7 @@
     var lv = document.querySelector('input[name="hlevel"]:checked').value, n = parseInt($('hostRounds').value, 10) || 10;
     $('hostCreate').disabled = true; say('hostSetupMsg', '');
     function done(p) {
-      return p.then(function (code) { store('fitline-host', { code: code }); enterRoom(b, u, code); })
+      return p.then(function (code) { track('class_created', b); store('fitline-host', { code: code }); enterRoom(b, u, code); })
         .catch(function (e) { say('hostSetupMsg', friendly(e)); })
         .then(function () { $('hostCreate').disabled = false; });
     }
@@ -1538,6 +1553,7 @@
     var c = HOST.cls, r = c.round, rows = standingsFor(r);
     var board = rows.slice(0, 80).map(function (x) { return { u: x.uid.slice(0, 8), n: x.name, t: x.total, r: x.rs[rn(c) - 1] }; });
     hostDo({ phase: 'reveal', board: board });
+    track('class_round', HOST.backend);
   });
   $('hostNext').addEventListener('click', function () {
     var c = HOST.cls;

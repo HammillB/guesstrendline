@@ -6,9 +6,14 @@
 //   3. writes the class and its head-count document to Firestore with a service account.
 // Students never call this. They join, play and watch the class exactly as before.
 //
+// It also counts game events (POST /api/event) for usage numbers: one row per day and event name
+// in D1, holding only a number. No names, ids or IP addresses are stored.
+//
 // Secrets (set with `wrangler secret put`, never committed):
 //   TURNSTILE_SECRET            the Turnstile widget's secret key
 //   FIREBASE_SERVICE_ACCOUNT    the service account key JSON, as one string
+// Binding (wrangler.toml):
+//   STATS                       the D1 database holding the daily event counts
 
 const PROJECT_ID = 'trendlinegame';
 const ALLOWED_ORIGINS = ['https://fittheline.com', 'https://www.fittheline.com'];
@@ -16,6 +21,8 @@ const ALLOWED_HOSTNAMES = ['fittheline.com', 'www.fittheline.com'];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const MAX_CODE_ATTEMPTS = 6;
 const CLASS_LIFETIME_MS = 24 * 3600 * 1000;
+// The only event names /api/event accepts. Keep in sync with the track() calls in index.html.
+const EVENTS = ['solo_round', 'solo_game', 'class_created', 'class_join', 'class_line', 'class_round'];
 
 const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -237,6 +244,26 @@ async function createClass(env, uid, level, rounds, autoNames) {
   throw new HttpError(503, 'Could not find a free class code. Try again.');
 }
 
+// ---------- 4. usage counts ----------
+
+async function countEvent(request, env) {
+  const origin = request.headers.get('Origin');
+  // Browsers send Origin on a POST, so a missing one means a script, not the game.
+  if (!origin || !ALLOWED_ORIGINS.includes(origin)) throw new HttpError(403, 'Not allowed from this site.');
+  const raw = await request.text();
+  if (raw.length > 200) throw new HttpError(413, 'Request too large.');
+  let body;
+  try { body = JSON.parse(raw); } catch (e) { throw new HttpError(400, 'Bad request.'); }
+  if (!body || !EVENTS.includes(body.e)) throw new HttpError(400, 'Unknown event.');
+  if (env.STATS) {
+    const day = new Date().toISOString().slice(0, 10);
+    await env.STATS.prepare(
+      'INSERT INTO counts (day, event, n) VALUES (?1, ?2, 1) ON CONFLICT (day, event) DO UPDATE SET n = n + 1'
+    ).bind(day, body.e).run();
+  }
+  return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store', ...cors(origin) } });
+}
+
 // ---------- request handling ----------
 
 async function handle(request, env) {
@@ -245,6 +272,10 @@ async function handle(request, env) {
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: cors(origin) });
+  }
+  if (url.pathname === '/api/event' || url.pathname === '/event') {
+    if (request.method !== 'POST') throw new HttpError(405, 'Use POST.');
+    return countEvent(request, env);
   }
   if (url.pathname !== '/api/create-class' && url.pathname !== '/create-class') throw new HttpError(404, 'Not found.');
   if (request.method !== 'POST') throw new HttpError(405, 'Use POST.');

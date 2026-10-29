@@ -23,6 +23,31 @@ A teacher's browser sends the Worker its Firebase sign-in token and a Cloudflare
 
 Once teachers are creating classes through the Worker, change `allow create` on `/classes/{code}` in `firestore.rules` to `if false`, publish the rules, and the page can no longer create classes any other way. Undo by republishing the old rules.
 
+## Usage counts
+
+The page posts `{"e": "<event>"}` to `/api/event` and the Worker adds one to that day's total in the D1 database `fittheline-stats` (binding `STATS`, table `counts(day, event, n)`). Only the count is stored. Visits are counted separately by Cloudflare Web Analytics, which Cloudflare injects into the pages automatically.
+
+| Event | Sent when |
+| --- | --- |
+| `solo_round` | a solo player presses Check |
+| `solo_game` | a solo player finishes all 10 rounds |
+| `class_created` | a teacher launches a class |
+| `class_join` | a student takes a new seat in a class (not a rejoin) |
+| `class_line` | a student locks in a line |
+| `class_round` | a teacher reveals a round |
+
+To read them: Cloudflare dashboard > Storage & Databases > D1 > `fittheline-stats` > Console, or from this folder:
+
+```
+npx wrangler d1 execute fittheline-stats --remote --command "SELECT event, SUM(n) AS total FROM counts WHERE day >= date('now', '-30 days') GROUP BY event"
+```
+
+The table was created with:
+
+```
+CREATE TABLE counts (day TEXT NOT NULL, event TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, event))
+```
+
 ## Tests
 
 `node tests/worker.test.mjs` runs the Worker against fake Turnstile, Google and Firestore servers.

@@ -32,7 +32,8 @@
     <p>The short version: there are no accounts, no ads and no tracking cookies. The game only keeps a name you type and your lines, and only for class games. The site counts page visits without cookies, so I can see how many people use it but not who they are.</p></section>
 <section class="board"><h2>What the game collects</h2>
     <ul>
-      <li><b>Solo play:</b> nothing is sent anywhere. Your best scores are saved in your own browser.</li>
+      <li><b>Solo play:</b> nothing about you is sent anywhere. Your best scores are saved in your own browser.</li>
+      <li><b>Usage counts:</b> when a round or game is finished, a class is launched or joined, or a line is locked in, the game adds one to a daily total for that kind of event (for example, "solo rounds played on October 28"). Only the total is kept. No name, ID, score, IP address or device information is stored with it.</li>
       <li><b>Joining a class:</b> the class code, the name you type (up to 16 characters), the line you lock in each round, and the time you joined. The game also creates a random anonymous ID so it can tell players apart. It is not linked to your name, email or any account.</li>
       <li><b>Launching a class:</b> the class settings (difficulty, number of rounds) and a random anonymous ID for the teacher's browser.</li>
     </ul>
@@ -46,6 +47,7 @@
       <li><b>GitHub Pages</b> hosts the site. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub's privacy statement</a>.</li>
       <li><b>Cloudflare</b> handles the fittheline.com address and passes traffic to the site. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare's privacy policy</a>.</li>
       <li><b>Cloudflare Web Analytics</b> counts page visits and measures how fast pages load: which page was visited, the referring site, the browser and device type, and the country. It uses no cookies, does not fingerprint your device, and does not follow you to other sites. See <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noopener">Cloudflare Web Analytics</a>.</li>
+      <li><b>Cloudflare Workers and D1</b> run the small server that launches classes and keeps the daily usage totals described above.</li>
       <li><b>Cloudflare Turnstile</b> runs a quick automatic check that a real person is launching a class. It only loads for teachers on the Launch a class screen. See <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener">Turnstile's privacy addendum</a>.</li>
     </ul>
     <p>These providers can see technical information such as your IP address when your browser connects, as part of how the internet works. I do not sell your information, share it for advertising, or use analytics or advertising cookies.</p></section>
